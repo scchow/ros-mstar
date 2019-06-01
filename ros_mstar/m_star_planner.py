@@ -186,7 +186,7 @@ class JointGraphNode:
 
 class MStarPlanner(Node):
 
-    def __init__(self, resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, heuristic='l2', 
+    def __init__(self, resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, robot_radius, heuristic='l2', 
         USE_COSTMAP_VALUES, MAXCOST=float("inf")):
 
         super().__init__('m_star')
@@ -202,6 +202,7 @@ class MStarPlanner(Node):
         self.goal2_pose = (goal2_x, goal2y)
         self.occupancy_threshold - occupancy_threshold
         self.costmap_topic = costmap_topic
+        self.robot_radius = robot_radius
         self.heuristic = heuristic
         self.MAXCOST = MAXCOST
 
@@ -414,7 +415,7 @@ def main(args=None):
     rclpy.init(args=args)
 
     m_star = MStarPlanner()
-    m_star = MStarPlanner(resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, heuristic, 
+    m_star = MStarPlanner(resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, robot_radius, heuristic, 
         USE_COSTMAP_VALUES, MAXCOST)
 
     (r1_plan, r2_plan) = m_star.get_plan()
