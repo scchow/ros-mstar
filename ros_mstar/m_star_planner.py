@@ -91,7 +91,7 @@ class RobotGraph:
         return (x, y)
 
     def check_obstacles(self, vertex_id):
-        costmap_pose = self.convert_graph_index_to_costmap_pose(vertex_id)
+        costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         left_boundary_costmap_x_index = int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
         right_boundary_costmap_x_index = int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
         top_boundary_costmap_y_index = int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution))
@@ -109,7 +109,7 @@ class RobotGraph:
             return True
 
     def get_costmap_value(self, vertex_id):
-        costmap_pose = self.convert_graph_index_to_costmap_pose(vertex_id)
+        costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         left_boundary_costmap_x_index = int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
         right_boundary_costmap_x_index = int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
         top_boundary_costmap_y_index = int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution))
@@ -126,7 +126,7 @@ class RobotGraph:
         return highest_val
 
     def edge_cost(self, source_vertex_id, dest_vertex_id):
-        dest_vertex =self.graph[dest_vertex_id]
+        dest_vertex = self.graph[dest_vertex_id]
         if self.use_costmap_values:
             return self.edge_costs + dest_vertex.costmap_value
         else:
@@ -139,6 +139,7 @@ class RobotGraph:
 
         unvisited_vertices = []
         unvisited_vertex_costs = []
+        unvisited_vertex_ids = []
 
         # instantiate goal vertex
         goal_vertex = self.graph[self.goal_id]
@@ -262,8 +263,8 @@ class MStarPlanner(Node):
 
     def check_collisions(self, node_id):
 
-        (r1_x, r1_y) = self.robot1.convert_graph_index_to_costmap_pose(self, node_id[0], node_id[1])
-        (r2_x, r2_y) = self.robot2.convert_graph_index_to_costmap_pose(self, node_id[2], node_id[3])
+        (r1_x, r1_y) = self.robot1.convert_graph_index_to_costmap_pose(node_id[0], node_id[1])
+        (r2_x, r2_y) = self.robot2.convert_graph_index_to_costmap_pose(node_id[2], node_id[3])
 
         collision_set = set()
         if (math.sqrt((r2_x - r1_x)**2 + (r2_y - r1_y)**2) <= 2*self.robot_radius):
@@ -351,15 +352,14 @@ class MStarPlanner(Node):
         if ADDED_COLLISIONS:
             if node_id not in self.open_set_ids:
                 self.open_set_ids.append(node_id)
-                self.open_set_costs.append(node.cost + heuristic_function(node_id))
+                self.open_set_costs.append(node.cost + self.heuristic_function(node_id))
             for back_node_id in node.back_set:
-                backprop(back_node_id, node.collision_set)
+                self.backprop(back_node_id, node.collision_set)
 
+    def heuristic_function(self, node_id):
 
-    def self.heuristic_function(node_id):
-
-        (curr_r1_x, curr_r1_y) = self.robot1.convert_graph_index_to_costmap_pose(self, node_id[0], node_id[1])
-        (curr_r2_x, curr_r2_y) = self.robot2.convert_graph_index_to_costmap_pose(self, node_id[2], node_id[3])
+        (curr_r1_x, curr_r1_y) = self.robot1.convert_graph_index_to_costmap_pose(node_id[0], node_id[1])
+        (curr_r2_x, curr_r2_y) = self.robot2.convert_graph_index_to_costmap_pose(node_id[2], node_id[3])
 
         (goal_r1_x, goal_r1_y) = self.goal1_pose
         (goal_r2_x, goal_r2_y) = self.goal2_pose
@@ -385,39 +385,38 @@ class MStarPlanner(Node):
         self.open_set_costs = []
 
         # initialize start node
-        start_node = get_node_from_id(start_node_id)
+        start_node = self.get_node_from_id(self.start_node_id)
         start_node.cost = 0
-        self.graph[start_node_id] = start_node
+        self.graph[self.start_node_id] = start_node
 
         self.open_set_ids.append(self.start_node_id)
-        self.open_set_costs.append(start_node.cost + self.heuristic_function(start_node_id))
+        self.open_set_costs.append(start_node.cost + self.heuristic_function(self.start_node_id))
 
         while len(self.open_set) != 0:
 
             lowest_index = np.argmin(np.array(self.open_set_costs))
             node_id = self.open_set_ids.pop(lowest_index)
             node_cost = self.open_set_costs.pop(lowest_index)
-            node = get_node_from_id(node_id)
+            node = self.get_node_from_id(node_id)
             if self.is_goal(node_id):
                 return self.back_track(node_id)
 
-            if self.check_collsions(node_id) is not empty:
+            if self.check_collisions(node_id):
                 continue
-
 
             neighbor_ids = self.get_neighbor_ids(node_id)
             for neighbor_id in neighbor_ids:
-                neighbor = get_node_from_id(neighbor_id)
+                neighbor = self.get_node_from_id(neighbor_id)
                 neighbor.back_set.append(node_id)
                 neighbor.collision_set = neighbor.collision_set.union(self.check_collisions(neighbor_id))
                 self.graph[neighbor_id] = neighbor
-                backprop(node_id, neighbor.collision_set)
+                self.backprop(node_id, neighbor.collision_set)
 
                 if node.cost + self.edge_cost(node_id, neighbor_id) < neighbor.cost:
                     neighbor.cost = self.edge_cost(node_id, neighbor_id)
-                    if neighbor.id in open_set_ids:
+                    if neighbor.id in self.open_set_ids:
                         neighbor_index = self.open_set_ids.index(neighbor_id)
-                        self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(start_node_id)
+                        self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(self.start_node_id)
                     neighbor.back_ptr = node_id
                     self.graph[neighbor_id] = neighbor
                     
