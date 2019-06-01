@@ -23,6 +23,7 @@ from ros_mstar.srv import MStarSrv
 
 import math
 import numpy as np
+import sys
 
 
 class RobotGraphVertex:
@@ -185,18 +186,27 @@ class JointGraphNode:
 
 class MStarPlanner(Node):
 
-    def __init__(self):
+    def __init__(self, resolution, occupancy_threshold, costmap_topic, mstar_service, robot_radius, heuristic, USE_COSTMAP_VALUES, MAXCOST):
 
         super().__init__('m_star')
 
-        self.resolution = self.get_parameter('resolution')._value
-        self.occupancy_threshold = self.get_parameter('occupancy_threshold')._value
-        self.costmap_topic = self.get_parameter('costmap_topic')._value
-        self.mstar_service = self.get_parameter('mstar_service')._value
-        self.robot_radius = self.get_parameter('robot_radius')._value
-        self.heuristic = self.get_parameter('heuristic')._value
-        self.USE_COSTMAP_VALUES = self.get_parameter('USE_COSTMAP_VALUES')._value
-        self.MAXCOST = self.get_parameter('MAXCOST')._value
+        # self.resolution = self.get_parameter('resolution')._value
+        # self.occupancy_threshold = self.get_parameter('occupancy_threshold')._value
+        # self.costmap_topic = self.get_parameter('costmap_topic')._value
+        # self.mstar_service = self.get_parameter('mstar_service')._value
+        # self.robot_radius = self.get_parameter('robot_radius')._value
+        # self.heuristic = self.get_parameter('heuristic')._value
+        # self.USE_COSTMAP_VALUES = self.get_parameter('USE_COSTMAP_VALUES')._value
+        # self.MAXCOST = self.get_parameter('MAXCOST')._value
+
+        self.resolution = resolution
+        self.occupancy_threshold = occupancy_threshold
+        self.costmap_topic = costmap_topic
+        self.mstar_service = mstar_service
+        self.robot_radius = robot_radius
+        self.heuristic = heuristic
+        self.USE_COSTMAP_VALUES = USE_COSTMAP_VALUES
+        self.MAXCOST = MAXCOST
 
         self.costmap_msg = None
         self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback)
@@ -445,7 +455,16 @@ def main(args=None):
 
     rclpy.init(args=args)
 
-    m_star = MStarPlanner()
+    resolution = float(args[0])
+    occupancy_threshold = float(args[1])
+    costmap_topic = args[2]
+    mstar_service = args[3]
+    robot_radius = float(args[4])
+    heuristic = args[5]
+    USE_COSTMAP_VALUES = bool(int(args[6]))
+    MAXCOST = float(args[7])
+
+    m_star = MStarPlanner(resolution, occupancy_threshold, costmap_topic, mstar_service, robot_radius, heuristic, USE_COSTMAP_VALUES, MAXCOST)
 
     rclpy.spin(m_star)
 
@@ -457,4 +476,4 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
