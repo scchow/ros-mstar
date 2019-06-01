@@ -16,7 +16,12 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import String
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from nav_msgs.msg import MapMetaData, OccupancyGrid
+from tf.transformations import quaternion_from_euler, euler_from_quaternion
+
+import math
+import numpy as np
 
 
 class RobotGraphVertex:
@@ -29,7 +34,7 @@ class RobotGraphVertex:
 
 
 class RobotGraph:
-    def __init__(self, resolution, start_x, start_y, goal_x, goal_y, occupancy_threshold, costmap_topic, USE_COSTMAP_VALUES=True, MAXCOST=float("inf")):
+    def __init__(self, resolution, start_x, start_y, goal_x, goal_y, occupancy_threshold, costmap_msg, USE_COSTMAP_VALUES=True, MAXCOST=float("inf")):
         self.costmap = None
         self.resolution = resolution
         self.start_pose = (start_x, start_y)
@@ -38,11 +43,12 @@ class RobotGraph:
         self.use_costmap_values = USE_COSTMAP_VALUES
         self.MAXCOST = MAXCOST
         self.edge_costs = self.resolution
-        costmap_sub = rospy.Subscriber(costmap_topic, OccupancyGrid, self.costmap_callback)         ## FIXME update to ros2
-
-        while self.costmap is None:
-            continue
-
+        self.costmap = costmap_msg.data
+        self.costmap_resolution = costmap_msg.info.resolution
+        self.costmap_width = costmap_msg.info.width
+        self.costmap_height = costmap_msg.info.height
+        self.costmap_origin_x = costmap_msg.info.origin.position.x
+        self.costmap_origin_y = costmap_msg.info.origin.position.y
         self.width = int(round(self.costmap_width * (self.costmap_resolution/self.resolution)))
         self.height = int(round(self.costmap_height * (self.costmap_resolution/self.resolution)))
         self.start_id = self.convert_costmap_pose_to_graph_index(self.start_pose[0], self.start_pose[1])
@@ -72,15 +78,6 @@ class RobotGraph:
         # calculate optimal policy for each vertex
         self.compute_optimal_policy()
 
-
-    ## FIXME
-    def costmap_callback(self, msg):
-        # self.costmap = 
-        # self.costmap_width =
-        # self.costmap_height =
-        # self.costmap_resolution =
-        # self.costmap_origin_x = 
-        # self.costmap_origin_y = 
 
     def convert_costmap_pose_to_graph_index(self, x, y):
         x_index = int(round( (x - self.costmap_origin_x)*(self.costmap_resolution/self.resolution) ))
@@ -190,6 +187,14 @@ class MStarPlanner(Node):
         USE_COSTMAP_VALUES, MAXCOST=float("inf")):
 
         super().__init__('m_star')
+
+        ## self.parameter = self.get_parameter('parameter')._value
+
+        self.costmap_msg = None
+        self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback)
+        while self.costmap_msg is None:
+            continue
+
         self.publisher_ = self.create_publisher(String, 'topic')
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -207,16 +212,20 @@ class MStarPlanner(Node):
         self.MAXCOST = MAXCOST
 
         # instantiate individual graph for each robot and get optimal policy
-        self.robot1 = RobotGraph(resolution, start1_x, start1_y, goal1_x, goal1_y, occupancy_threshold, costmap_topic, USE_COSTMAP_VALUES, MAXCOST)
-        self.robot2 = RobotGraph(resolution, start2_x, start2_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, USE_COSTMAP_VALUES, MAXCOST)
+        self.robot1 = RobotGraph(resolution, start1_x, start1_y, goal1_x, goal1_y, occupancy_threshold, self.costmap_msg, USE_COSTMAP_VALUES, MAXCOST)
+        self.robot2 = RobotGraph(resolution, start2_x, start2_y, goal2_x, goal2_y, occupancy_threshold, self.costmap_msg, USE_COSTMAP_VALUES, MAXCOST)
 
-        self.width = robot1.width
-        self.height = robot1.height
+        self.width = costmap_msg.info.width
+        self.height = costmap_msg.info.height
         self.start_node_id = (robot1.start_id[0], robot1.start_id[1], robot2.start_id[0], robot2.start_id[1])
         self.goal_node_id = (robot1.goal_id[0], robot1.goal_id[1], robot2.goal_id[0], robot2.goal_id[1])
 
         # instantiate graph
         self.graph = {}
+
+
+    def costmap_callback(self, msg):
+        self.costmap_msg = msg
 
     def timer_callback(self):
         msg = String()
@@ -315,7 +324,9 @@ class MStarPlanner(Node):
             for trace_node_id in back_trace:
                 r1_plan.append(self.robot1.convert_graph_index_to_costmap_pose(trace_node_id[0], trace_node_id[1]))
                 r2_plan.append(self.robot2.convert_graph_index_to_costmap_pose(trace_node_id[2], trace_node_id[3]))
-            return (r1_plan, r2_plan)
+            r1_path = self.convert_plan_to_path(r1_plan)
+            r2_path = self.convert_plan_to_path(r2_plan)
+            return (r1_path, r2_path)
 
 
     def backprop(self, node_id, collision_set):
@@ -398,29 +409,37 @@ class MStarPlanner(Node):
                         self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(start_node_id)
                     neighbor.back_ptr = node_id
                     self.graph[neighbor_id] = neighbor
-
                     
 
-def convert_plan_to_waypoints(plan):
-    ## FIXME
+    def convert_plan_to_path(self, plan):
+        poses = []
+        for waypoint in plan:
+            pose_stamped = PoseStamped()
+            pose_stamped.header.stamp = self.now()
+            pose_stamped.header.frame_id = self.costmap_msg.header.frame_id
+            pose_stamped.pose.position.x = waypoint[0]
+            pose_stamped.pose.position.y = waypoint[1]
+            pose_stamped.pose.position.y = 0
+            pose_stamped.pose.orientation = heading(0)
+            poses.append(pose_stamped)
+        return poses
+
+
+def heading(yaw):
+    """A helper function to getnerate quaternions from yaws."""
+    q = quaternion_from_euler(0, 0, yaw)
+    return Quaternion(*q)
 
 
 def main(args=None):
-    # read in param for graph resolution         ## FIXME
-    # read in param for robot1 start pose        ## FIXME
-    # read in param for robot1 goal pose         ## FIXME
-    # read in param for robot2 start pose        ## FIXME
-    # read in param for robot2 goal pose         ## FIXME
 
     rclpy.init(args=args)
 
-    m_star = MStarPlanner()
+    # m_star = MStarPlanner()
     m_star = MStarPlanner(resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, robot_radius, heuristic, 
         USE_COSTMAP_VALUES, MAXCOST)
 
-    (r1_plan, r2_plan) = m_star.get_plan()
-    r1_waypoints = convert_plan_to_waypoints(r1_plan)
-    r2_waypoints = convert_plan_to_waypoints(r2_plan)
+    (r1_path, r2_path) = m_star.get_plan()
 
     rclpy.spin(m_star)
 
