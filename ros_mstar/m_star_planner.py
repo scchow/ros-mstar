@@ -19,6 +19,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from nav_msgs.msg import MapMetaData, OccupancyGrid
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
+from ros_mstar.srv import MStarSrv
 
 import math
 import numpy as np
@@ -172,23 +173,29 @@ class RobotGraph:
 
 
 class JointGraphNode:
-    def __init__(self, graph_id, MAXCOST=float("inf")):
+    def __init__(self, graph_id, value, MAXCOST=float("inf")):
         self.id = graph_id
         self.collision_set = set()
         self.back_ptr = None
         self.back_set = []
-        self.value = self.robot1.graph[(graph_id[0], graph_id[1])].costmap_value + self.robot2.graph[(graph_id[2], graph_id[3])].costmap_value
+        self.value = value
         self.cost = MAXCOST
 
 
 class MStarPlanner(Node):
 
-    def __init__(self, resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, robot_radius, heuristic='l2', 
-        USE_COSTMAP_VALUES, MAXCOST=float("inf")):
+    def __init__(self):
 
         super().__init__('m_star')
 
-        ## self.parameter = self.get_parameter('parameter')._value
+        self.resolution = self.get_parameter('resolution')._value
+        self.occupancy_threshold = self.get_parameter('occupancy_threshold')._value
+        self.costmap_topic = self.get_parameter('costmap_topic')._value
+        self.mstar_service = self.get_parameter('mstar_service')._value
+        self.robot_radius = self.get_parameter('robot_radius')._value
+        self.heuristic = self.get_parameter('heuristic')._value
+        self.USE_COSTMAP_VALUES = self.get_parameter('USE_COSTMAP_VALUES')._value
+        self.MAXCOST = self.get_parameter('MAXCOST')._value
 
         self.costmap_msg = None
         self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback)
@@ -200,32 +207,13 @@ class MStarPlanner(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
 
-        self.resolution = resolution
-        self.start1_pose = (start1_x, start1_y)
-        self.goal1_pose = (goal1_x, goal1_y)
-        self.start2_pose = (start2_x, start2_y)
-        self.goal2_pose = (goal2_x, goal2y)
-        self.occupancy_threshold - occupancy_threshold
-        self.costmap_topic = costmap_topic
-        self.robot_radius = robot_radius
-        self.heuristic = heuristic
-        self.MAXCOST = MAXCOST
-
-        # instantiate individual graph for each robot and get optimal policy
-        self.robot1 = RobotGraph(resolution, start1_x, start1_y, goal1_x, goal1_y, occupancy_threshold, self.costmap_msg, USE_COSTMAP_VALUES, MAXCOST)
-        self.robot2 = RobotGraph(resolution, start2_x, start2_y, goal2_x, goal2_y, occupancy_threshold, self.costmap_msg, USE_COSTMAP_VALUES, MAXCOST)
-
-        self.width = costmap_msg.info.width
-        self.height = costmap_msg.info.height
-        self.start_node_id = (robot1.start_id[0], robot1.start_id[1], robot2.start_id[0], robot2.start_id[1])
-        self.goal_node_id = (robot1.goal_id[0], robot1.goal_id[1], robot2.goal_id[0], robot2.goal_id[1])
-
-        # instantiate graph
-        self.graph = {}
+        self.srv = self.create_service(MStarSrv, self.mstar_service, self.service_callback)
 
 
     def costmap_callback(self, msg):
         self.costmap_msg = msg
+        self.width = costmap_msg.info.width
+        self.height = costmap_msg.info.height
 
     def timer_callback(self):
         msg = String()
@@ -234,13 +222,36 @@ class MStarPlanner(Node):
         self.get_logger().info('Publishing: "%s"' % msg.data)
         self.i += 1
 
+    def service_callback(self, request, response):
+        self.start1_pose = (request.start1_x, request.start1_y)
+        self.goal1_pose = (request.goal1_x, request.goal1_y)
+        self.start2_pose = (request.start2_x, request.start2_y)
+        self.goal2_pose = (request.goal2_x, request.goal2y)
+
+        # instantiate individual graph for each robot and get optimal policy
+        self.robot1 = RobotGraph(self.resolution, request.start1_x, request.start1_y, request.goal1_x, request.goal1_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST)
+        self.robot2 = RobotGraph(self.resolution, request.start2_x, request.start2_y, request.goal2_x, request.goal2_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST)
+
+        self.start_node_id = (robot1.start_id[0], robot1.start_id[1], robot2.start_id[0], robot2.start_id[1])
+        self.goal_node_id = (robot1.goal_id[0], robot1.goal_id[1], robot2.goal_id[0], robot2.goal_id[1])
+
+        # instantiate graph
+        self.graph = {}
+
+        # run m* to get paths
+        (r1_path, r2_path) = m_star.get_plan()
+        response.r1_path = r1_path
+        response.r2_path = r2_path
+
+        return response
 
 
     def get_node_from_id(self, graph_id):
         if graph_id in self.graph:
             return self.graph[graph_id]
         else:
-            node = JointGraphNode(graph_id)
+            value = self.robot1.graph[(graph_id[0], graph_id[1])].costmap_value + self.robot2.graph[(graph_id[2], graph_id[3])].costmap_value
+            node = JointGraphNode(graph_id, value, self.MAXCOST)
             self.graph[graph_id] = node
             return node
 
@@ -249,7 +260,7 @@ class MStarPlanner(Node):
         return node_id == self.goal_node_id
 
 
-    def check_collisions(self, node):
+    def check_collisions(self, node_id):
 
         (r1_x, r1_y) = self.robot1.convert_graph_index_to_costmap_pose(self, node_id[0], node_id[1])
         (r2_x, r2_y) = self.robot2.convert_graph_index_to_costmap_pose(self, node_id[2], node_id[3])
@@ -394,7 +405,7 @@ class MStarPlanner(Node):
                 continue
 
 
-            neighbor_ids = self.get_neighbor_ids(node_id):
+            neighbor_ids = self.get_neighbor_ids(node_id)
             for neighbor_id in neighbor_ids:
                 neighbor = get_node_from_id(neighbor_id)
                 neighbor.back_set.append(node_id)
@@ -435,11 +446,7 @@ def main(args=None):
 
     rclpy.init(args=args)
 
-    # m_star = MStarPlanner()
-    m_star = MStarPlanner(resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, robot_radius, heuristic, 
-        USE_COSTMAP_VALUES, MAXCOST)
-
-    (r1_path, r2_path) = m_star.get_plan()
+    m_star = MStarPlanner()
 
     rclpy.spin(m_star)
 
