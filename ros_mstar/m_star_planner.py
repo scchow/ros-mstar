@@ -69,6 +69,9 @@ class RobotGraph:
                             vertex.neighbor_ids.append(neighbor_id)
                     self.graph[(r, c)] = vertex
 
+        # calculate optimal policy for each vertex
+        self.compute_optimal_policy()
+
 
     ## FIXME
     def costmap_callback(self, msg):
@@ -171,63 +174,48 @@ class RobotGraph:
                         unvisited_vertex_costs[neighbor_index] = neighbor.dist
 
 
-class JoinitGraphNode:
-    def __init__(self, MAXCOST=float("inf")):
+class JointGraphNode:
+    def __init__(self, graph_id, MAXCOST=float("inf")):
+        self.id = graph_id
         self.collision_set = set()
         self.back_ptr = None
         self.back_set = []
+        self.value = self.robot1.graph[(graph_id[0], graph_id[1])].costmap_value + self.robot2.graph[(graph_id[2], graph_id[3])].costmap_value
         self.cost = MAXCOST
-
-
-class JointGraph:
-    def __init__(self):
-        #
-
-    def is_goal(self, node):
-        # check if node is the goal node
-
-    def check_collisions(self, node):     ## FIXME
-        # for a given node, check if any robots collide
-        # return set of colliding robots or empty set if no robots collide
-
-
-    def get_neighbors(self, node):        ## FIXME
-        # get neihbors of node that are in explorable states
-            # such that transitions between node and neighbor do not collide with map or each other (robots)
-
-    def back_track(self, node):
-        if node.back_ptr is None:
-            return [node]
-        else:
-            trace = [node] + self.back_track(node.back_ptr)
-            return trace.reverse()
-
-    def backprop(self, node_id, collision_set):        ## FIXME
-        node = self.get_node_from_id(node_id)
-        ADDED_COLLISIONS = False
-        for collision in collision_set:
-            if collision not in node.collision_set:
-                node.collision_set = node.collision_set.add(collision)
-                ADDED_COLLISIONS = True
-
-        if ADDED_COLLISIONS:
-            if node.id not in self.open_set_ids:
-                self.open_set_ids.append(node.id)
-                self.open_set_costs.append(node.cost + heuristic_function(node))
-            for back_node in node.back_set:
-                backprop(back_node.id, node.collision_set)
 
 
 class MStarPlanner(Node):
 
-    def __init__(self, MAXCOST=float("inf")):
+    def __init__(self, resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, heuristic='l2', 
+        USE_COSTMAP_VALUES, MAXCOST=float("inf")):
+
         super().__init__('m_star')
         self.publisher_ = self.create_publisher(String, 'topic')
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
+
+        self.resolution = resolution
+        self.start1_pose = (start1_x, start1_y)
+        self.goal1_pose = (goal1_x, goal1_y)
+        self.start2_pose = (start2_x, start2_y)
+        self.goal2_pose = (goal2_x, goal2y)
+        self.occupancy_threshold - occupancy_threshold
+        self.costmap_topic = costmap_topic
+        self.heuristic = heuristic
         self.MAXCOST = MAXCOST
-        self.create_graphs()
+
+        # instantiate individual graph for each robot and get optimal policy
+        self.robot1 = RobotGraph(resolution, start1_x, start1_y, goal1_x, goal1_y, occupancy_threshold, costmap_topic, USE_COSTMAP_VALUES, MAXCOST)
+        self.robot2 = RobotGraph(resolution, start2_x, start2_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, USE_COSTMAP_VALUES, MAXCOST)
+
+        self.width = robot1.width
+        self.height = robot1.height
+        self.start_node_id = (robot1.start_id[0], robot1.start_id[1], robot2.start_id[0], robot2.start_id[1])
+        self.goal_node_id = (robot1.goal_id[0], robot1.goal_id[1], robot2.goal_id[0], robot2.goal_id[1])
+
+        # instantiate graph
+        self.graph = {}
 
     def timer_callback(self):
         msg = String()
@@ -237,63 +225,183 @@ class MStarPlanner(Node):
         self.i += 1
 
 
-    def create_graphs(self):        ## FIXME
 
-        # robot map   G_r
-        ## create row x col sized graph, where the value of each node is the value in the costmap
+    def get_node_from_id(self, graph_id):
+        if graph_id in self.graph:
+            return self.graph[graph_id]
+        else:
+            node = JointGraphNode(graph_id)
+            self.graph[graph_id] = node
+            return node
 
-        ## 4 connect each node if the straight line between the 2 nodes does not collide with an obstacle in the map
 
-        ## associate start and goal pose of robot1 with nodes
-        ## associate start and goal pose of robot2 with nodes
+    def is_goal(self, node_id):
+        return node_id == self.goal_node_id
 
 
-        # joint graph  G
-        ## create G_r x G_r sized graph where value of G(r1, r2) = G_r(r1) + G_r(r2)
-        ## set start and goal nodes
+    def check_collisions(self, node):
+
+        (r1_x, r1_y) = self.robot1.convert_graph_index_to_costmap_pose(self, node_id[0], node_id[1])
+        (r2_x, r2_y) = self.robot2.convert_graph_index_to_costmap_pose(self, node_id[2], node_id[3])
+
+        collision_set = set()
+        if (math.sqrt((r2_x - r1_x)**2 + (r2_y - r1_y)**2) <= 2*self.robot_radius):
+            set.add((1, 2))
+        
+        return collision_set
+
+
+
+    def check_transition_collides(self, curr_r1_id, curr_r2_id, next_vertex_1_id, next_vertex_2_id):
+
+        if len(self.check_collisions((next_vertex_1_id[0], next_vertex_1_id[1], next_vertex_2_id[0], next_vertex_2_id[1]))) != 0:
+            return []
+
+        elif len(self.check_collisions((curr_r1_id[0], curr_r1_id[1], next_vertex_2_id[0], next_vertex_2_id[1]))) != 0:
+            return [(curr_r1_id[0], curr_r1_id[1], next_vertex_2_id[0], next_vertex_2_id[1])]
+
+        elif len(self.check_collisions((next_vertex_1_id[0], next_vertex_1_id[1], curr_r2_id[0], curr_r2_id[1]))) != 0:
+            return [(next_vertex_1_id[0], next_vertex_1_id[1], curr_r2_id[0], curr_r2_id[1])]
+
+        else:
+            return []
+
+
+    def get_neighbor_ids(self, node_id):
+
+        node = self.graph[node_id]
+        curr_r1_id = (node_id[0], node_id[1])
+        curr_r2_id = (node_id[2], node_id[3])
+
+        if len(node.collision_set) == 0:
+            next_vertex_1_id = self.robot1.graph[curr_r1_id].optimal_policy
+            next_vertex_2_id = self.robot2.graph[curr_r2_id].optimal_policy
+
+            transition_collisions = self.check_transition_collides(curr_r1_id, curr_r2_id, next_vertex_1_id, next_vertex_2_id)
+            if len(transition_collisions) == 0:
+                return [(next_vertex_1_id[0], next_vertex_1_id[1], next_vertex_2_id[0], next_vertex_2_id[1])]
+
+            else:
+                return transition_collisions
+
+        # generate pairwise combinations of neighboring states
+        else:
+            r1_neighbors = self.robot1.graph[curr_r1_id].neighbors
+            r2_neighbors = self.robot2.graph[curr_r2_id].neighbors
+            r1_neighbors.append(curr_r1_id)
+            r2_neighbors.append(curr_r2_id)
+
+            neighbors = []
+            for r1_neighbor in r1_neighbors:
+                for r2_neighbor in r2_neighbors:
+                    if not ((r1_neighbor == curr_r1_id) and (r2_neighbor == curr_r2_id)):
+                        if len(self.check_transition_collides(curr_r1_id, curr_r2_id, r1_neighbor, r2_neighbor)) == 0:
+                            neighbors.append((r1_neighbor[0], r1_neighbor[1], r2_neighbor[0], r2_neighbor[1]))
+            return neighbors
+
+
+
+    def back_track(self, node_id):
+        node = self.get_node_from_id(node_id)
+        if node.back_ptr is None:
+            return [node_id]
+        else:
+            trace = [node_id] + self.back_track(node.back_ptr)
+            back_trace =  trace.reverse()
+
+            r1_plan = []
+            r2_plan = []
+            for trace_node_id in back_trace:
+                r1_plan.append(self.robot1.convert_graph_index_to_costmap_pose(trace_node_id[0], trace_node_id[1]))
+                r2_plan.append(self.robot2.convert_graph_index_to_costmap_pose(trace_node_id[2], trace_node_id[3]))
+            return (r1_plan, r2_plan)
+
+
+    def backprop(self, node_id, collision_set):
+        node = self.get_node_from_id(node_id)
+        ADDED_COLLISIONS = False
+        for collision in collision_set:
+            if collision not in node.collision_set:
+                node.collision_set = node.collision_set.add(collision)
+                ADDED_COLLISIONS = True
+
+        if ADDED_COLLISIONS:
+            if node_id not in self.open_set_ids:
+                self.open_set_ids.append(node_id)
+                self.open_set_costs.append(node.cost + heuristic_function(node_id))
+            for back_node_id in node.back_set:
+                backprop(back_node_id, node.collision_set)
+
+
+    def self.heuristic_function(node_id):
+
+        (curr_r1_x, curr_r1_y) = self.robot1.convert_graph_index_to_costmap_pose(self, node_id[0], node_id[1])
+        (curr_r2_x, curr_r2_y) = self.robot2.convert_graph_index_to_costmap_pose(self, node_id[2], node_id[3])
+
+        (goal_r1_x, goal_r1_y) = self.goal1_pose
+        (goal_r2_x, goal_r2_y) = self.goal2_pose
+
+        if self.heuristic == 'l1':
+            r1 = abs(goal_r1_x - curr_r1_x) + abs(goal_r1_y - curr_r1_y)
+            r2 = abs(goal_r2_x - curr_r2_x) + abs(goal_r2_y - curr_r2_y)
+            return r1 + r2
+
+        # otherwise assume l2
+        else:
+            r1 = math.sqrt((goal_r1_x - curr_r1_x)**2 + (goal_r1_y - curr_r1_y)**2)
+            r2 = math.sqrt((goal_r2_x - curr_r2_x)**2 + (goal_r2_y - curr_r2_y)**2)
+            return r1 + r2
+
+
+    def edge_cost(self, source, dest):
+        return self.robot1.edge_cost((source[0], source[1]), (dest[0], dest[1])) + self.robot2.edge_cost((source[2], source[3]), (dest[2], dest[3]))
 
 
     def get_plan(self):
         self.open_set_ids = []
         self.open_set_costs = []
 
-        self.create_graphs()
-
-        # compute optimal policy for each node in joint graph
-        self.compute_optimal_policy()
-
-        ## start_node.id = 
-        start_node.back_ptr = 0
+        # initialize start node
+        start_node = get_node_from_id(start_node_id)
         start_node.cost = 0
-        self.open_set_ids.append(start_node.id)
-        self.open_set_costs.append(start_node.cost + heuristic_function(start_node))
+        self.graph[start_node_id] = start_node
+
+        self.open_set_ids.append(self.start_node_id)
+        self.open_set_costs.append(start_node.cost + self.heuristic_function(start_node_id))
 
         while len(self.open_set) != 0:
 
             lowest_index = np.argmin(np.array(self.open_set_costs))
             node_id = self.open_set_ids.pop(lowest_index)
             node_cost = self.open_set_costs.pop(lowest_index)
-            node = self.get_node_from_id(node_id)
-            if self.is_goal(node):
-                return self.back_track(node)
+            node = get_node_from_id(node_id)
+            if self.is_goal(node_id):
+                return self.back_track(node_id)
 
-            # if check_collsions(node) is not empty:
-                # continue
+            if self.check_collsions(node_id) is not empty:
+                continue
 
 
-            # neighbors = get_neighbors(node):
-            for neighbor in neighbors:
-                neighbor.back_set.append(node)
-                neighbor.collision_set = neighbor.collision_set.union(check_collisions(neighbor))
-                backprop(node.id, neighbor.collision_set)
+            neighbor_ids = self.get_neighbor_ids(node_id):
+            for neighbor_id in neighbor_ids:
+                neighbor = get_node_from_id(neighbor_id)
+                neighbor.back_set.append(node_id)
+                neighbor.collision_set = neighbor.collision_set.union(self.check_collisions(neighbor_id))
+                self.graph[neighbor_id] = neighbor
+                backprop(node_id, neighbor.collision_set)
 
-                # if node.cost + f(edge_node_neighbor) < neighbor.cost:
-                    # neighbor.cost = node.cost + f(edge_node_neighbor)
+                if node.cost + self.edge_cost(node_id, neighbor_id) < neighbor.cost:
+                    neighbor.cost = self.edge_cost(node_id, neighbor_id)
                     if neighbor.id in open_set_ids:
-                        neighbor_index = self.open_set_ids.index(neighbor.id)
-                        self.open_set_costs[neighbor_index] = neighbor.cost + heuristic_function(start_node)
-                    neighbor.back_ptr = node
+                        neighbor_index = self.open_set_ids.index(neighbor_id)
+                        self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(start_node_id)
+                    neighbor.back_ptr = node_id
+                    self.graph[neighbor_id] = neighbor
 
+                    
+
+def convert_plan_to_waypoints(plan):
+    ## FIXME
 
 
 def main(args=None):
@@ -306,7 +414,12 @@ def main(args=None):
     rclpy.init(args=args)
 
     m_star = MStarPlanner()
-    plan = m_star.get_plan()
+    m_star = MStarPlanner(resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, heuristic, 
+        USE_COSTMAP_VALUES, MAXCOST)
+
+    (r1_plan, r2_plan) = m_star.get_plan()
+    r1_waypoints = convert_plan_to_waypoints(r1_plan)
+    r2_waypoints = convert_plan_to_waypoints(r2_plan)
 
     rclpy.spin(m_star)
 
