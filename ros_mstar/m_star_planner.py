@@ -125,7 +125,7 @@ class RobotGraph:
         return highest_val
 
     def edge_cost(self, source_vertex_id, dest_vertex_id):
-        dest_vertex =self.graph[dest_vertex_id]
+        dest_vertex = self.graph[dest_vertex_id]
         if self.use_costmap_values:
             return self.edge_costs + dest_vertex.costmap_value
         else:
@@ -344,8 +344,7 @@ class MStarPlanner(Node):
             for back_node_id in node.back_set:
                 backprop(back_node_id, node.collision_set)
 
-
-    def self.heuristic_function(node_id):
+    def heuristic_function(self, node_id):
 
         (curr_r1_x, curr_r1_y) = self.robot1.convert_graph_index_to_costmap_pose(self, node_id[0], node_id[1])
         (curr_r2_x, curr_r2_y) = self.robot2.convert_graph_index_to_costmap_pose(self, node_id[2], node_id[3])
@@ -374,7 +373,7 @@ class MStarPlanner(Node):
         self.open_set_costs = []
 
         # initialize start node
-        start_node = get_node_from_id(start_node_id)
+        start_node = self.get_node_from_id(start_node_id)
         start_node.cost = 0
         self.graph[start_node_id] = start_node
 
@@ -386,21 +385,20 @@ class MStarPlanner(Node):
             lowest_index = np.argmin(np.array(self.open_set_costs))
             node_id = self.open_set_ids.pop(lowest_index)
             node_cost = self.open_set_costs.pop(lowest_index)
-            node = get_node_from_id(node_id)
+            node = self.get_node_from_id(node_id)
             if self.is_goal(node_id):
                 return self.back_track(node_id)
 
-            if self.check_collsions(node_id) is not empty:
+            if self.check_collisions(node_id) is not empty:
                 continue
-
 
             neighbor_ids = self.get_neighbor_ids(node_id):
             for neighbor_id in neighbor_ids:
-                neighbor = get_node_from_id(neighbor_id)
+                neighbor = self.get_node_from_id(neighbor_id)
                 neighbor.back_set.append(node_id)
                 neighbor.collision_set = neighbor.collision_set.union(self.check_collisions(neighbor_id))
                 self.graph[neighbor_id] = neighbor
-                backprop(node_id, neighbor.collision_set)
+                self.backprop(node_id, neighbor.collision_set)
 
                 if node.cost + self.edge_cost(node_id, neighbor_id) < neighbor.cost:
                     neighbor.cost = self.edge_cost(node_id, neighbor_id)
