@@ -90,7 +90,7 @@ class RobotGraph:
         return (x, y)
 
     def check_obstacles(self, vertex_id):
-        costmap_pose = self.convert_graph_index_to_costmap_pose(vertex_id)
+        costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         left_boundary_costmap_x_index = int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
         right_boundary_costmap_x_index = int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
         top_boundary_costmap_y_index = int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution))
@@ -108,7 +108,7 @@ class RobotGraph:
             return True
 
     def get_costmap_value(self, vertex_id):
-        costmap_pose = self.convert_graph_index_to_costmap_pose(vertex_id)
+        costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         left_boundary_costmap_x_index = int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
         right_boundary_costmap_x_index = int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
         top_boundary_costmap_y_index = int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution))
@@ -138,6 +138,7 @@ class RobotGraph:
 
         unvisited_vertices = []
         unvisited_vertex_costs = []
+        unvisited_vertex_ids = []
 
         # instantiate goal vertex
         goal_vertex = self.graph[self.goal_id]
@@ -183,8 +184,8 @@ class JointGraphNode:
 
 class MStarPlanner(Node):
 
-    def __init__(self, resolution, start1_x, start1_y, start2_x, start2,_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, robot_radius, heuristic='l2', 
-        USE_COSTMAP_VALUES, MAXCOST=float("inf")):
+    def __init__(self, resolution, start1_x, start1_y, start2_x, start2_y, goal1_x, goal1_y, goal2_x, goal2_y, occupancy_threshold, costmap_topic, robot_radius, heuristic='l2', 
+        USE_COSTMAP_VALUES=True, MAXCOST=float("inf")):
 
         super().__init__('m_star')
 
@@ -204,7 +205,7 @@ class MStarPlanner(Node):
         self.start1_pose = (start1_x, start1_y)
         self.goal1_pose = (goal1_x, goal1_y)
         self.start2_pose = (start2_x, start2_y)
-        self.goal2_pose = (goal2_x, goal2y)
+        self.goal2_pose = (goal2_x, goal2_y)
         self.occupancy_threshold - occupancy_threshold
         self.costmap_topic = costmap_topic
         self.robot_radius = robot_radius
@@ -215,10 +216,10 @@ class MStarPlanner(Node):
         self.robot1 = RobotGraph(resolution, start1_x, start1_y, goal1_x, goal1_y, occupancy_threshold, self.costmap_msg, USE_COSTMAP_VALUES, MAXCOST)
         self.robot2 = RobotGraph(resolution, start2_x, start2_y, goal2_x, goal2_y, occupancy_threshold, self.costmap_msg, USE_COSTMAP_VALUES, MAXCOST)
 
-        self.width = costmap_msg.info.width
-        self.height = costmap_msg.info.height
-        self.start_node_id = (robot1.start_id[0], robot1.start_id[1], robot2.start_id[0], robot2.start_id[1])
-        self.goal_node_id = (robot1.goal_id[0], robot1.goal_id[1], robot2.goal_id[0], robot2.goal_id[1])
+        self.width = self.costmap_msg.info.width
+        self.height = self.costmap_msg.info.height
+        self.start_node_id = (self.robot1.start_id[0], self.robot1.start_id[1], self.robot2.start_id[0], self.robot2.start_id[1])
+        self.goal_node_id = (self.robot1.goal_id[0], self.robot1.goal_id[1], self.robot2.goal_id[0], self.robot2.goal_id[1])
 
         # instantiate graph
         self.graph = {}
@@ -251,8 +252,8 @@ class MStarPlanner(Node):
 
     def check_collisions(self, node):
 
-        (r1_x, r1_y) = self.robot1.convert_graph_index_to_costmap_pose(self, node_id[0], node_id[1])
-        (r2_x, r2_y) = self.robot2.convert_graph_index_to_costmap_pose(self, node_id[2], node_id[3])
+        (r1_x, r1_y) = self.robot1.convert_graph_index_to_costmap_pose(node_id[0], node_id[1])
+        (r2_x, r2_y) = self.robot2.convert_graph_index_to_costmap_pose(node_id[2], node_id[3])
 
         collision_set = set()
         if (math.sqrt((r2_x - r1_x)**2 + (r2_y - r1_y)**2) <= 2*self.robot_radius):
@@ -340,14 +341,14 @@ class MStarPlanner(Node):
         if ADDED_COLLISIONS:
             if node_id not in self.open_set_ids:
                 self.open_set_ids.append(node_id)
-                self.open_set_costs.append(node.cost + heuristic_function(node_id))
+                self.open_set_costs.append(node.cost + self.heuristic_function(node_id))
             for back_node_id in node.back_set:
-                backprop(back_node_id, node.collision_set)
+                self.backprop(back_node_id, node.collision_set)
 
     def heuristic_function(self, node_id):
 
-        (curr_r1_x, curr_r1_y) = self.robot1.convert_graph_index_to_costmap_pose(self, node_id[0], node_id[1])
-        (curr_r2_x, curr_r2_y) = self.robot2.convert_graph_index_to_costmap_pose(self, node_id[2], node_id[3])
+        (curr_r1_x, curr_r1_y) = self.robot1.convert_graph_index_to_costmap_pose(node_id[0], node_id[1])
+        (curr_r2_x, curr_r2_y) = self.robot2.convert_graph_index_to_costmap_pose(node_id[2], node_id[3])
 
         (goal_r1_x, goal_r1_y) = self.goal1_pose
         (goal_r2_x, goal_r2_y) = self.goal2_pose
@@ -373,12 +374,12 @@ class MStarPlanner(Node):
         self.open_set_costs = []
 
         # initialize start node
-        start_node = self.get_node_from_id(start_node_id)
+        start_node = self.get_node_from_id(self.start_node_id)
         start_node.cost = 0
-        self.graph[start_node_id] = start_node
+        self.graph[self.start_node_id] = start_node
 
         self.open_set_ids.append(self.start_node_id)
-        self.open_set_costs.append(start_node.cost + self.heuristic_function(start_node_id))
+        self.open_set_costs.append(start_node.cost + self.heuristic_function(self.start_node_id))
 
         while len(self.open_set) != 0:
 
@@ -389,10 +390,10 @@ class MStarPlanner(Node):
             if self.is_goal(node_id):
                 return self.back_track(node_id)
 
-            if self.check_collisions(node_id) is not empty:
+            if self.check_collisions(node_id):
                 continue
 
-            neighbor_ids = self.get_neighbor_ids(node_id):
+            neighbor_ids = self.get_neighbor_ids(node_id)
             for neighbor_id in neighbor_ids:
                 neighbor = self.get_node_from_id(neighbor_id)
                 neighbor.back_set.append(node_id)
@@ -402,9 +403,9 @@ class MStarPlanner(Node):
 
                 if node.cost + self.edge_cost(node_id, neighbor_id) < neighbor.cost:
                     neighbor.cost = self.edge_cost(node_id, neighbor_id)
-                    if neighbor.id in open_set_ids:
+                    if neighbor.id in self.open_set_ids:
                         neighbor_index = self.open_set_ids.index(neighbor_id)
-                        self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(start_node_id)
+                        self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(self.start_node_id)
                     neighbor.back_ptr = node_id
                     self.graph[neighbor_id] = neighbor
                     
