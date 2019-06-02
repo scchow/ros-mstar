@@ -22,8 +22,8 @@ def launch(launch_descriptor, argv):
     package = 'ros_mstar'
     ld.add_process(
         cmd=[get_executable_path(package_name=package, executable_name='m_star_planner.py'), 
-        '<resolution>', '<occupancy_threshold>', '<costmap_topic>', '<mstar_service>',
-        '<robot_radius>', '<heuristic>', '<USE_COSTMAP_VALUES>', '<MAXCOST>'],
+        '0.5', '128', '<costmap_topic>', 'mstar_service', '0.25',
+        'l2', '1', 'inf'],
         name='m_star_planner',
         exit_handler=restart_exit_handler,
     )
