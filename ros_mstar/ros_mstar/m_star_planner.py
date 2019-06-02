@@ -194,7 +194,7 @@ class RobotGraph:
                 new_dist = vertex.dist + self.edge_cost(vertex_id, neighbor_id)
                 if new_dist < neighbor.dist:
                     neighbor.dist = new_dist
-                    neighbor.optimal_policy = vertex
+                    neighbor.optimal_policy = vertex_id
                     self.graph[neighbor_id] = neighbor
                     if neighbor.id in unvisited_vertex_ids:
                         neighbor_index = unvisited_vertex_ids.index(neighbor_id)
@@ -345,8 +345,8 @@ class MStarPlanner(Node):
 
         # generate pairwise combinations of neighboring states
         else:
-            r1_neighbors = self.robot1.graph[curr_r1_id].neighbors
-            r2_neighbors = self.robot2.graph[curr_r2_id].neighbors
+            r1_neighbors = self.robot1.graph[curr_r1_id].neighbor_ids
+            r2_neighbors = self.robot2.graph[curr_r2_id].neighbor_ids
             r1_neighbors.append(curr_r1_id)
             r2_neighbors.append(curr_r2_id)
 
