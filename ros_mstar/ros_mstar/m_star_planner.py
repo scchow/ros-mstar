@@ -488,6 +488,8 @@ class MStarPlanner(Node):
                 self.graph[neighbor_id] = neighbor
                 self.backprop(node_id, neighbor.collision_set)
 
+                node = self.get_node_from_id(node_id)
+                neighbor = self.get_node_from_id(neighbor_id)
                 if node.cost + self.edge_cost(node_id, neighbor_id) < neighbor.cost:
                     neighbor.cost = self.edge_cost(node_id, neighbor_id)
                     if neighbor.id in self.open_set_ids:
