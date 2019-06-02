@@ -410,8 +410,9 @@ class MStarPlanner(Node):
         ADDED_COLLISIONS = False
         for collision in collision_set:
             if collision not in node.collision_set:
-                node.collision_set = node.collision_set.add(collision)
+                node.collision_set.add(collision)
                 ADDED_COLLISIONS = True
+                self.graph[node_id] = node
 
         if ADDED_COLLISIONS:
             if node_id not in self.open_set_ids:
