@@ -319,7 +319,7 @@ class MStarPlanner(Node):
             value = self.robot1.graph[(graph_id[0], graph_id[1])].costmap_value + self.robot2.graph[(graph_id[2], graph_id[3])].costmap_value
             node = JointGraphNode(graph_id, value, self.MAXCOST)
             self.graph[graph_id] = node
-            return node
+            return self.graph[graph_id]
 
 
     def is_goal(self, node_id):
