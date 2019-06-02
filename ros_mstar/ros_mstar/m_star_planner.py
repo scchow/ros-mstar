@@ -19,7 +19,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from nav_msgs.msg import Path, MapMetaData, OccupancyGrid
 from transforms3d.euler import euler2quat
-from ros_mstar.srv import MStarSrv
+from mstar_msgs.srv import MStarSrv
 
 import math
 import numpy as np
@@ -459,7 +459,7 @@ def heading(yaw):
     return Quaternion(*q)
 
 
-def main(args=None):
+def main(args=sys.argv[1:]):
 
     rclpy.init(args=args)
 
