@@ -31,7 +31,7 @@ class RobotGraphVertex:
         self.id = graph_id
         self.costmap_value = costmap_value
         self.dist = MAXCOST
-        self.optimal_policy = None
+        self.optimal_policy = graph_id
         self.neighbor_ids = []
 
 
