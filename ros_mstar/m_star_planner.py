@@ -18,7 +18,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from nav_msgs.msg import Path, MapMetaData, OccupancyGrid
-from tf.transformations import quaternion_from_euler, euler_from_quaternion
+from transforms3d.euler import euler2quat
 from ros_mstar.srv import MStarSrv
 
 import math
@@ -455,7 +455,7 @@ class MStarPlanner(Node):
 
 def heading(yaw):
     """A helper function to getnerate quaternions from yaws."""
-    q = quaternion_from_euler(0, 0, yaw)
+    q = euler2quat(0, 0, yaw)
     return Quaternion(*q)
 
 
