@@ -23,7 +23,7 @@ import time
 
 import rclpy
 from rclpy.node import Node
-from ros_mstar.srv import MStarSrv
+from mstar_msgs.srv import MStarSrv
 
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import Path
