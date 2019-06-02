@@ -127,9 +127,9 @@ class ExploreController(Node):
             request (MStarSrv): a request for a plan
         """
         while (self.robot1_pose is None):
-            rospy.get_logger().warn("Waiting to get pose for robot 1")
+            rclpy.get_logger().warn("Waiting to get pose for robot 1")
         while (self.robot1_pose is None):
-            rospy.get_logger().warn("Waiting to get pose for robot 2")
+            rclpy.get_logger().warn("Waiting to get pose for robot 2")
 
         request = MStarSrv.Request()
         request.start1_x, request.start1_y = self.robot1_pose.position.x, self.robot1_pose.position.y
