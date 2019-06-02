@@ -305,7 +305,7 @@ class MStarPlanner(Node):
 
         collision_set = set()
         if (math.sqrt((r2_x - r1_x)**2 + (r2_y - r1_y)**2) <= 2*self.robot_radius):
-            set.add((1, 2))
+            collision_set.add((1, 2))
         
         return collision_set
 
