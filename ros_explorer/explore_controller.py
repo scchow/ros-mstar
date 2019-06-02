@@ -29,19 +29,17 @@ from geometry_msgs.msg import Pose
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
 
-# name of the topic publishing robot1 pose
+# name of the topic publishing robot 1/2 pose
 ROBOT1_POSE_TOPIC = "/robot1_pose"
-# name of the topic publishing robot2 pose
 ROBOT2_POSE_TOPIC = "/robot2_pose"
 
-# name of the topic to publish robot1 path
+# name of the topic to publish robot 1/2 path
 ROBOT1_PATH_TOPIC = "/robot1_path"
-# name of the topic to publish robot2 path
 ROBOT2_PATH_TOPIC = "/robot2_path"
 
+# name of the topic to monitor for robot 1/2 switch pressing
 ROBOT1_SWITCH_TOPIC = "/robot1_switch_found"
-ROBOT1_SWITCH_TOPIC = "/robot2_switch_found"
-
+ROBOT2_SWITCH_TOPIC = "/robot2_switch_found"
 
 # name of the MSTAR service
 MSTAR_SERVICE_NAME = "mstar_service"
@@ -77,7 +75,7 @@ class ExploreController(Node):
 
         # Subscribers for robot 1 and 2 switch found
         self.robot1_switch_sub = self.create_subscription(Bool, ROBOT1_SWITCH_TOPIC, lambda msg: self.update_switch_status(1, msg))
-        self.robot2_switch_sub = self.create_subscription(Bool, ROBOT1_SWITCH_TOPIC, lambda msg: self.update_switch_status(2, msg))
+        self.robot2_switch_sub = self.create_subscription(Bool, ROBOT2_SWITCH_TOPIC, lambda msg: self.update_switch_status(2, msg))
 
         # M star server client
         self.mstar_client = self.create_client(MStarSrv, MSTAR_SERVICE_NAME)
@@ -254,10 +252,21 @@ class ExploreController(Node):
                 self.get_logger().info("Exploration in Progress:\n\tRobot 1 in Room {}, Tag Status {}\n\tRobot2 in Room {}, Tag Status {}\n\n"\
                     .format(self.robot1_room, self.robot1_done, self.robot2_room, self.robot2_done))
 
-        
         self.get_logger.info("Exploration complete!\n\tRobot 1 in Room {}\n\tRobot2 in Room {}".format(self.robot1_room, self.robot2_room))
 
+def main(args=None):
+    """ Runs an Explorer node """
 
+    rclpy.init(args=args)
+    
+    explorer = ExploreController()
+    explorer.run()
+    
+    rclpy.spin(explorer)
 
+    explorer.destroy_node()
+    rclpy.shutdown()
 
+if __name__== "__main__":
+    main()
 
