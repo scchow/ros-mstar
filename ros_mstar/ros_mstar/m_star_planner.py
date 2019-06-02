@@ -388,21 +388,25 @@ class MStarPlanner(Node):
 
 
 
-    def back_track(self, node_id):
+    def back_track_helper(self, node_id):
         node = self.get_node_from_id(node_id)
         if node.back_ptr is None:
             return [node_id]
         else:
-            back_trace = [node_id] + self.back_track(node.back_ptr)
+            back_trace = [node_id] + self.back_track_helper(node.back_ptr)
+            return back_trace
 
-            r1_plan = []
-            r2_plan = []
-            for trace_node_id in back_trace:
-                r1_plan.append(self.robot1.convert_graph_index_to_costmap_pose(trace_node_id[0], trace_node_id[1]))
-                r2_plan.append(self.robot2.convert_graph_index_to_costmap_pose(trace_node_id[2], trace_node_id[3]))
-            r1_path = self.convert_plan_to_path(r1_plan)
-            r2_path = self.convert_plan_to_path(r2_plan)
-            return (r1_path, r2_path)
+    def back_track(self, node_id):
+        back_trace = self.back_track_helper(node_id)
+        back_trace.reverse()
+        r1_plan = []
+        r2_plan = []
+        for trace_node_id in back_trace:
+            r1_plan.append(self.robot1.convert_graph_index_to_costmap_pose(trace_node_id[0], trace_node_id[1]))
+            r2_plan.append(self.robot2.convert_graph_index_to_costmap_pose(trace_node_id[2], trace_node_id[3]))
+        r1_path = self.convert_plan_to_path(r1_plan)
+        r2_path = self.convert_plan_to_path(r2_plan)
+        return (r1_path, r2_path)
 
 
     def backprop(self, node_id, collision_set):
