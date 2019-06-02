@@ -457,7 +457,7 @@ class MStarPlanner(Node):
                     self.graph[neighbor_id] = neighbor
 
         self.get_logger().warn("M* did not find a valid path combination")
-        return (None, None)
+        return (Path(), Path())
                     
 
     def convert_plan_to_path(self, plan):
