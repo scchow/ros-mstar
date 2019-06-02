@@ -93,10 +93,23 @@ class RobotGraph:
 
     def check_obstacles(self, vertex_id):
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
-        left_boundary_costmap_x_index = int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
-        right_boundary_costmap_x_index = int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
-        top_boundary_costmap_y_index = int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution))
-        bottom_boundary_costmap_y_index = int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution))
+        costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
+        if costmap_index[0] == 0:
+            left_boundary_costmap_x_index = 0
+        else:
+            left_boundary_costmap_x_index = int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
+        if costmap_index[0] >= self.costmap_width-1:
+            right_boundary_costmap_x_index = self.costmap_width-1
+        else:
+            right_boundary_costmap_x_index = int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution))
+        if costmap_index[1] == 0:
+            top_boundary_costmap_y_index = 0
+        else:
+            top_boundary_costmap_y_index = int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution))
+        if costmap_index[1] >= self.costmap_height-1:
+            bottom_boundary_costmap_y_index = self.costmap_height-1
+        else:
+            bottom_boundary_costmap_y_index = int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution))
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
@@ -108,6 +121,7 @@ class RobotGraph:
 
         if highest_val >= self.occupancy_threshold:
             return True
+            
 
     def get_costmap_value(self, vertex_id):
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
