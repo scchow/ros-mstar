@@ -36,7 +36,8 @@ class RobotGraphVertex:
 
 
 class RobotGraph:
-    def __init__(self, resolution, start_x, start_y, goal_x, goal_y, occupancy_threshold, costmap_msg, USE_COSTMAP_VALUES=True, MAXCOST=float("inf")):
+    def __init__(self, resolution, start_x, start_y, goal_x, goal_y, occupancy_threshold, costmap_msg, USE_COSTMAP_VALUES=True, MAXCOST=float("inf"), logger=None):
+        self.logger=logger
         self.costmap = None
         self.resolution = resolution
         self.start_pose = (start_x, start_y)
@@ -115,7 +116,19 @@ class RobotGraph:
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
                 cell = x+self.costmap_width*y
-                value = self.costmap[cell]
+                try:
+                    value = self.costmap[cell]
+                except IndexError:
+                    self.logger.error('Indexed out of bounds!')
+                    self.logger.error('vertex id: {}'.format(vertex_id))
+                    self.logger.error('computed idx: {}'.format(cell))
+                    self.logger.error('height: {}'.format(self.costmap_height))
+                    self.logger.error('width: {}'.format(self.costmap_width))
+                    self.logger.error('x: {}'.format(x))
+                    self.logger.error('y: {}'.format(y))
+                    self.logger.error('costmap origin x: {}'.format(self.costmap_origin_x))
+                    self.logger.error('costmap origin y: {}'.format(self.costmap_origin_y))
+                    sys.exit()
                 if value > highest_val:
                     highest_val = value
 
@@ -147,7 +160,19 @@ class RobotGraph:
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
                 cell = x+self.costmap_width*y
-                value = self.costmap[cell]
+                try:
+                    value = self.costmap[cell]
+                except IndexError:
+                    self.logger.error('Indexed out of bounds!')
+                    self.logger.error('vertex id: {}'.format(vertex_id))
+                    self.logger.error('computed idx: {}'.format(cell))
+                    self.logger.error('height: {}'.format(self.costmap_height))
+                    self.logger.error('width: {}'.format(self.costmap_width))
+                    self.logger.error('x: {}'.format(x))
+                    self.logger.error('y: {}'.format(y))
+                    self.logger.error('costmap origin x: {}'.format(self.costmap_origin_x))
+                    self.logger.error('costmap origin y: {}'.format(self.costmap_origin_y))
+                    sys.exit()
                 if value > highest_val:
                     highest_val = value
 
@@ -237,8 +262,6 @@ class MStarPlanner(Node):
 
         self.costmap_msg = None
         self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback)
-        while self.costmap_msg is None:
-            continue
 
         self.publisher_ = self.create_publisher(String, 'topic')
         timer_period = 0.5  # seconds
@@ -250,6 +273,8 @@ class MStarPlanner(Node):
 
     def costmap_callback(self, msg):
         self.costmap_msg = msg
+        self.costmap = msg.data
+        self.get_logger().info('Costmap Received!')
         self.width = self.costmap_msg.info.width
         self.height = self.costmap_msg.info.height
 
@@ -261,14 +286,17 @@ class MStarPlanner(Node):
         self.i += 1
 
     def service_callback(self, request, response):
+        while self.costmap_msg is None:
+            self.get_logger().warn('No Costmap yet, cannot run service!')
+            continue
         self.start1_pose = (request.start1_x, request.start1_y)
         self.goal1_pose = (request.goal1_x, request.goal1_y)
         self.start2_pose = (request.start2_x, request.start2_y)
-        self.goal2_pose = (request.goal2_x, request.goal2y)
+        self.goal2_pose = (request.goal2_x, request.goal2_y)
 
         # instantiate individual graph for each robot and get optimal policy
-        self.robot1 = RobotGraph(self.resolution, request.start1_x, request.start1_y, request.goal1_x, request.goal1_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST)
-        self.robot2 = RobotGraph(self.resolution, request.start2_x, request.start2_y, request.goal2_x, request.goal2_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST)
+        self.robot1 = RobotGraph(self.resolution, request.start1_x, request.start1_y, request.goal1_x, request.goal1_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST, logger=self.get_logger())
+        self.robot2 = RobotGraph(self.resolution, request.start2_x, request.start2_y, request.goal2_x, request.goal2_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST, logger=self.get_logger())
 
         self.start_node_id = (self.robot1.start_id[0], self.robot1.start_id[1], self.robot2.start_id[0], self.robot2.start_id[1])
         self.goal_node_id = (self.robot1.goal_id[0], self.robot1.goal_id[1], self.robot2.goal_id[0], self.robot2.goal_id[1])

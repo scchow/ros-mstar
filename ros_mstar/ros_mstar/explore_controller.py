@@ -30,16 +30,16 @@ from nav_msgs.msg import Path
 from std_msgs.msg import Bool
 
 # name of the topic publishing robot 1/2 pose
-ROBOT1_POSE_TOPIC = "/robot1_pose"
-ROBOT2_POSE_TOPIC = "/robot2_pose"
+ROBOT1_POSE_TOPIC = "/r1/pose"
+ROBOT2_POSE_TOPIC = "/r2/pose"
 
 # name of the topic to publish robot 1/2 path
-ROBOT1_PATH_TOPIC = "/robot1_path"
-ROBOT2_PATH_TOPIC = "/robot2_path"
+ROBOT1_PATH_TOPIC = "/r1/path"
+ROBOT2_PATH_TOPIC = "/r2/path"
 
 # name of the topic to monitor for robot 1/2 switch pressing
-ROBOT1_SWITCH_TOPIC = "/robot1_switch_found"
-ROBOT2_SWITCH_TOPIC = "/robot2_switch_found"
+ROBOT1_SWITCH_TOPIC = "/r1/switch_found"
+ROBOT2_SWITCH_TOPIC = "/r2/switch_found"
 
 # name of the MSTAR service
 MSTAR_SERVICE_NAME = "mstar_service"
