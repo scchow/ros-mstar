@@ -429,7 +429,7 @@ class MStarPlanner(Node):
         self.open_set_ids.append(self.start_node_id)
         self.open_set_costs.append(start_node.cost + self.heuristic_function(self.start_node_id))
 
-        while len(self.open_set) != 0:
+        while len(self.open_set_ids) != 0:
 
             lowest_index = np.argmin(np.array(self.open_set_costs))
             node_id = self.open_set_ids.pop(lowest_index)
