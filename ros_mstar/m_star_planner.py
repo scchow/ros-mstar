@@ -17,7 +17,7 @@ from rclpy.node import Node
 
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-from nav_msgs.msg import MapMetaData, OccupancyGrid
+from nav_msgs.msg import Path, MapMetaData, OccupancyGrid
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from ros_mstar.srv import MStarSrv
 
@@ -446,7 +446,11 @@ class MStarPlanner(Node):
             pose_stamped.pose.orientation = heading(yaw)
             poses.append(pose_stamped)
             prev_waypoint = waypoint
-        return poses
+        path = Path()
+        path.header.stamp = self.now()
+        path.header.frame_id = self.costmap_msg.header.frame_id
+        path.poses = poses
+        return path
 
 
 def heading(yaw):
