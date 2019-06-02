@@ -10,6 +10,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name, ['launch/m_star_planner_launch_example.py']),
+        ('share/' + package_name, ['launch/simple_service_client_launch_example.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -31,6 +33,8 @@ setup(
         'console_scripts': [
             'm_star_planner ='
             ' ros_mstar.m_star_planner:main',
+            'explorer ='
+            ' ros_mstar.explore_controller:main',
         ],
     },
 )
