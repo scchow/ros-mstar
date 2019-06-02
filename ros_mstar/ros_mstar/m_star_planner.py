@@ -365,8 +365,7 @@ class MStarPlanner(Node):
         if node.back_ptr is None:
             return [node_id]
         else:
-            trace = [node_id] + self.back_track(node.back_ptr)
-            back_trace =  trace.reverse()
+            back_trace = [node_id] + self.back_track(node.back_ptr)
 
             r1_plan = []
             r2_plan = []
@@ -456,6 +455,9 @@ class MStarPlanner(Node):
                         self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(self.start_node_id)
                     neighbor.back_ptr = node_id
                     self.graph[neighbor_id] = neighbor
+
+        self.get_logger().warn("M* did not find a valid path combination")
+        return (None, None)
                     
 
     def convert_plan_to_path(self, plan):
