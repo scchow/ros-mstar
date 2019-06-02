@@ -252,7 +252,7 @@ class ExploreController(Node):
                 self.get_logger().info("Exploration in Progress:\n\tRobot 1 in Room {}, Tag Status {}\n\tRobot2 in Room {}, Tag Status {}\n\n"\
                     .format(self.robot1_room, self.robot1_done, self.robot2_room, self.robot2_done))
 
-        self.get_logger.info("Exploration complete!\n\tRobot 1 in Room {}\n\tRobot2 in Room {}".format(self.robot1_room, self.robot2_room))
+        self.get_logger().info("Exploration complete!\n\tRobot 1 in Room {}\n\tRobot2 in Room {}".format(self.robot1_room, self.robot2_room))
 
 def main(args=None):
     """ Runs an Explorer node """
