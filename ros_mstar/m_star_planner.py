@@ -58,24 +58,24 @@ class RobotGraph:
 
         # instantiate graph vertices
         self.graph = {}
-        for r in range(self.width):
-            for c in range(self.height):
-                if not self.check_obstacles((r, c)):
-                    costmap_value = self.get_costmap_value((r, c))
-                    vertex = RobotGraphVertex((r, c), costmap_value, self.MAXCOST)
-                    self.graph[(r, c)] = vertex
+        for x in range(self.width):
+            for y in range(self.height):
+                if not self.check_obstacles((x, y)):
+                    costmap_value = self.get_costmap_value((x, y))
+                    vertex = RobotGraphVertex((x, y), costmap_value, self.MAXCOST)
+                    self.graph[(x, y)] = vertex
 
         # instantiate graph edges
-        for r in range(self.width):
-            for c in range(self.height):
+        for x in range(self.width):
+            for y in range(self.height):
 
-                if (r, c) in self.graph:
-                    vertex = self.graph[(r, c)]
-                    # for neighbor in [(r-1, c+1), (r, c+1), (r+1, c+1), (r-1, c), (r+1, c) (r-1, c-1), (r, c-1), (r+1, c-1)]:    # 8 connect
-                    for neighbor_id in [(r-1, c+1), (r+1, c+1), (r-1, c-1), (r+1, c-1)]:    # 4 connect
+                if (x, y) in self.graph:
+                    vertex = self.graph[(x, y)]
+                    # for neighbor in [(x-1, y+1), (x, y+1), (x+1, y+1), (x-1, y), (x+1, y) (x-1, y-1), (x, y-1), (x+1, y-1)]:    # 8 connect
+                    for neighbor_id in [(x-1, y+1), (x+1, y+1), (x-1, y-1), (x+1, y-1)]:    # 4 connect
                         if neighbor_id in self.graph:
                             vertex.neighbor_ids.append(neighbor_id)
-                    self.graph[(r, c)] = vertex
+                    self.graph[(x, y)] = vertex
 
         # calculate optimal policy for each vertex
         self.compute_optimal_policy()
@@ -101,7 +101,7 @@ class RobotGraph:
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x*self.costmap_width + y
+                cell = x+self.costmap_width*y
                 value = self.costmap[cell]
                 if value > highest_val:
                     highest_val = value
@@ -119,7 +119,7 @@ class RobotGraph:
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x*self.costmap_width + y
+                cell = x+self.costmap_width*y
                 value = self.costmap[cell]
                 if value > highest_val:
                     highest_val = value
@@ -433,15 +433,19 @@ class MStarPlanner(Node):
 
     def convert_plan_to_path(self, plan):
         poses = []
-        for waypoint in plan:
+        prev_waypoint = plan[0]
+        for waypoint in plan[1:]:
             pose_stamped = PoseStamped()
             pose_stamped.header.stamp = self.now()
             pose_stamped.header.frame_id = self.costmap_msg.header.frame_id
             pose_stamped.pose.position.x = waypoint[0]
             pose_stamped.pose.position.y = waypoint[1]
             pose_stamped.pose.position.y = 0
-            pose_stamped.pose.orientation = heading(0)
+
+            yaw = math.atan2(waypoint[1] - prev_waypoint[1], waypoint[0] - prev_waypoint[0])
+            pose_stamped.pose.orientation = heading(yaw)
             poses.append(pose_stamped)
+            prev_waypoint = waypoint
         return poses
 
 
