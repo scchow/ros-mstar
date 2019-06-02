@@ -301,6 +301,13 @@ class MStarPlanner(Node):
         self.start_node_id = (self.robot1.start_id[0], self.robot1.start_id[1], self.robot2.start_id[0], self.robot2.start_id[1])
         self.goal_node_id = (self.robot1.goal_id[0], self.robot1.goal_id[1], self.robot2.goal_id[0], self.robot2.goal_id[1])
 
+        # check if starts and goals are valid vertices
+        if not((self.robot1.start_id in self.robot1.graph) and (self.robot2.start_id in self.robot2.graph) and (self.robot1.goal_id in self.robot1.graph) and (self.robot2.goal_id in self.robot2.graph)):
+            response.r1_path = Path()
+            response.r2_path = Path()
+            self.get_logger().warn("Start or goal nodes are not valid vertices")
+            return response
+
         # instantiate graph
         self.graph = {}
 
