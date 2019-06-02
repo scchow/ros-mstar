@@ -223,8 +223,8 @@ class MStarPlanner(Node):
 
     def costmap_callback(self, msg):
         self.costmap_msg = msg
-        self.width = costmap_msg.info.width
-        self.height = costmap_msg.info.height
+        self.width = self.costmap_msg.info.width
+        self.height = self.costmap_msg.info.height
 
     def timer_callback(self):
         msg = String()
@@ -243,14 +243,14 @@ class MStarPlanner(Node):
         self.robot1 = RobotGraph(self.resolution, request.start1_x, request.start1_y, request.goal1_x, request.goal1_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST)
         self.robot2 = RobotGraph(self.resolution, request.start2_x, request.start2_y, request.goal2_x, request.goal2_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST)
 
-        self.start_node_id = (robot1.start_id[0], robot1.start_id[1], robot2.start_id[0], robot2.start_id[1])
-        self.goal_node_id = (robot1.goal_id[0], robot1.goal_id[1], robot2.goal_id[0], robot2.goal_id[1])
+        self.start_node_id = (self.robot1.start_id[0], self.robot1.start_id[1], self.robot2.start_id[0], self.robot2.start_id[1])
+        self.goal_node_id = (self.robot1.goal_id[0], self.robot1.goal_id[1], self.robot2.goal_id[0], self.robot2.goal_id[1])
 
         # instantiate graph
         self.graph = {}
 
         # run m* to get paths
-        (r1_path, r2_path) = m_star.get_plan()
+        (r1_path, r2_path) = self.get_plan()
         response.r1_path = r1_path
         response.r2_path = r2_path
 
