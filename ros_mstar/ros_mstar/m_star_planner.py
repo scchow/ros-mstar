@@ -311,6 +311,7 @@ class MStarPlanner(Node):
 
 
     def is_goal(self, node_id):
+        self.get_logger().info('Found goal. ' + str(node_id) + ' = ' +  str(self.goal_node_id))
         return node_id == self.goal_node_id
 
 
@@ -379,9 +380,12 @@ class MStarPlanner(Node):
     def back_track_helper(self, node_id):
         node = self.get_node_from_id(node_id)
         if node.back_ptr is None:
-            return [node_id]
+            back_trace = [node_id]
+            self.get_logger().info('back trace: ' + str(back_trace))
+            return back_trace
         else:
             back_trace = [node_id] + self.back_track_helper(node.back_ptr)
+            self.get_logger().info('back trace: ' + str(back_trace))
             return back_trace
 
     def back_track(self, node_id):
