@@ -180,7 +180,9 @@ class RobotGraph:
 
     def edge_cost(self, source_vertex_id, dest_vertex_id):
         dest_vertex = self.graph[dest_vertex_id]
-        if self.use_costmap_values:
+        if source_vertex_id == dest_vertex_id:
+            return 0.0
+        elif self.use_costmap_values:
             return self.edge_costs + dest_vertex.costmap_value
         else:
             return self.edge_costs
@@ -494,7 +496,7 @@ class MStarPlanner(Node):
                     neighbor.cost = node.cost + self.edge_cost(node_id, neighbor_id)
                     if neighbor.id in self.open_set_ids:
                         neighbor_index = self.open_set_ids.index(neighbor_id)
-                        self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(self.start_node_id)
+                        self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(neighbor_id)
                     neighbor.back_ptr = node_id
                     self.graph[neighbor_id] = neighbor
 
