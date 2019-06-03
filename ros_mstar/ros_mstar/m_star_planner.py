@@ -388,6 +388,7 @@ class MStarPlanner(Node):
         self.get_logger().info('Goal found, backtracking')
         back_trace = self.back_track_helper(node_id)
         back_trace.reverse()
+        self.get_logger().info('backtrace: ' + str(back_trace))
         r1_plan = []
         r2_plan = []
         for trace_node_id in back_trace:
@@ -487,18 +488,19 @@ class MStarPlanner(Node):
     def convert_plan_to_path(self, plan):
         poses = []
         prev_waypoint = plan[0]
-        for waypoint in plan[1:]:
-            pose_stamped = PoseStamped()
-            pose_stamped.header.stamp = self.get_clock().now().to_msg()
-            pose_stamped.header.frame_id = self.costmap_msg.header.frame_id
-            pose_stamped.pose.position.x = waypoint[0]
-            pose_stamped.pose.position.y = waypoint[1]
-            pose_stamped.pose.position.y = 0
+        if len(plan) > 1:
+            for waypoint in plan[1:]:
+                pose_stamped = PoseStamped()
+                pose_stamped.header.stamp = self.get_clock().now().to_msg()
+                pose_stamped.header.frame_id = self.costmap_msg.header.frame_id
+                pose_stamped.pose.position.x = waypoint[0]
+                pose_stamped.pose.position.y = waypoint[1]
+                pose_stamped.pose.position.y = 0
 
-            yaw = math.atan2(waypoint[1] - prev_waypoint[1], waypoint[0] - prev_waypoint[0])
-            pose_stamped.pose.orientation = heading(yaw)
-            poses.append(pose_stamped)
-            prev_waypoint = waypoint
+                yaw = math.atan2(waypoint[1] - prev_waypoint[1], waypoint[0] - prev_waypoint[0])
+                pose_stamped.pose.orientation = heading(yaw)
+                poses.append(pose_stamped)
+                prev_waypoint = waypoint
         path = Path()
         path.header.stamp = self.get_clock().now().to_msg()
         path.header.frame_id = self.costmap_msg.header.frame_id
