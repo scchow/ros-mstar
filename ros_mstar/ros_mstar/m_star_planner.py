@@ -364,11 +364,16 @@ class MStarPlanner(Node):
             next_vertex_1_id = self.robot1.graph[curr_r1_id].optimal_policy
             next_vertex_2_id = self.robot2.graph[curr_r2_id].optimal_policy
 
+            self.get_logger().info('R1 optimal policy: ' + str(next_vertex_1_id))
+            self.get_logger().info('R2 optimal policy: ' + str(next_vertex_2_id))
+
             transition_collisions = self.check_transition_collides(curr_r1_id, curr_r2_id, next_vertex_1_id, next_vertex_2_id)
             if len(transition_collisions) == 0:
+                self.get_logger().info('Transition looks good')
                 return [(next_vertex_1_id[0], next_vertex_1_id[1], next_vertex_2_id[0], next_vertex_2_id[1])]
 
             else:
+                self.get_logger().info('Transition collides')
                 return transition_collisions
 
         # generate pairwise combinations of neighboring states
