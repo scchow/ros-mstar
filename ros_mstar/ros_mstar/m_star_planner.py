@@ -489,7 +489,7 @@ class MStarPlanner(Node):
         prev_waypoint = plan[0]
         for waypoint in plan[1:]:
             pose_stamped = PoseStamped()
-            pose_stamped.header.stamp = self.now()
+            pose_stamped.header.stamp = self.get_clock().now().to_msg()
             pose_stamped.header.frame_id = self.costmap_msg.header.frame_id
             pose_stamped.pose.position.x = waypoint[0]
             pose_stamped.pose.position.y = waypoint[1]
@@ -500,7 +500,7 @@ class MStarPlanner(Node):
             poses.append(pose_stamped)
             prev_waypoint = waypoint
         path = Path()
-        path.header.stamp = self.now()
+        path.header.stamp = self.get_clock().now().to_msg()
         path.header.frame_id = self.costmap_msg.header.frame_id
         path.poses = poses
         return path
