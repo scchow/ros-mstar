@@ -462,7 +462,7 @@ class MStarPlanner(Node):
 
         # initialize start node
         start_node = self.get_node_from_id(self.start_node_id)
-        start_node.cost = 0
+        start_node.cost = 0.0
         self.graph[self.start_node_id] = start_node
 
         self.open_set_ids.append(self.start_node_id)
@@ -491,7 +491,7 @@ class MStarPlanner(Node):
                 node = self.get_node_from_id(node_id)
                 neighbor = self.get_node_from_id(neighbor_id)
                 if node.cost + self.edge_cost(node_id, neighbor_id) < neighbor.cost:
-                    neighbor.cost = self.edge_cost(node_id, neighbor_id)
+                    neighbor.cost = node.cost + self.edge_cost(node_id, neighbor_id)
                     if neighbor.id in self.open_set_ids:
                         neighbor_index = self.open_set_ids.index(neighbor_id)
                         self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(self.start_node_id)
