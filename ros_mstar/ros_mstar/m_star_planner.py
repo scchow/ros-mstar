@@ -73,7 +73,7 @@ class RobotGraph:
                 if (x, y) in self.graph:
                     vertex = self.graph[(x, y)]
                     # for neighbor in [(x-1, y+1), (x, y+1), (x+1, y+1), (x-1, y), (x+1, y) (x-1, y-1), (x, y-1), (x+1, y-1)]:    # 8 connect
-                    for neighbor_id in [(x-1, y+1), (x+1, y+1), (x-1, y-1), (x+1, y-1)]:    # 4 connect
+                    for neighbor_id in [(x-1, y), (x, y+1), (x+1, y), (x, y-1)]:    # 4 connect
                         if neighbor_id in self.graph:
                             vertex.neighbor_ids.append(neighbor_id)
                     self.graph[(x, y)] = vertex
@@ -421,6 +421,7 @@ class MStarPlanner(Node):
 
 
     def backprop(self, node_id, collision_set):
+        self.get_logger().info('Running backprop')
         node = self.get_node_from_id(node_id)
         ADDED_COLLISIONS = False
         for collision in collision_set:
@@ -501,6 +502,9 @@ class MStarPlanner(Node):
                         self.open_set_costs[neighbor_index] = neighbor.cost + self.heuristic_function(neighbor_id)
                     neighbor.back_ptr = node_id
                     self.graph[neighbor_id] = neighbor
+                if neighbor_id not in self.open_set_ids:
+                    self.open_set_ids.append(neighbor_id)
+                    self.open_set_costs.append(neighbor.cost + self.heuristic_function(neighbor_id))
 
         self.get_logger().warn("M* did not find a valid path combination")
         return (Path(), Path())
