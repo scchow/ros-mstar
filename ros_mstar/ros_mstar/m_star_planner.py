@@ -385,6 +385,7 @@ class MStarPlanner(Node):
             return back_trace
 
     def back_track(self, node_id):
+        self.get_logger().info('Goal found, backtracking')
         back_trace = self.back_track_helper(node_id)
         back_trace.reverse()
         r1_plan = []
