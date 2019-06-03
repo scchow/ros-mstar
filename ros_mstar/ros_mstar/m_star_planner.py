@@ -274,6 +274,11 @@ class MStarPlanner(Node):
         self.start2_pose = (request.start2_x, request.start2_y)
         self.goal2_pose = (request.goal2_x, request.goal2_y)
 
+        self.get_logger().info('Start 1 pose: ' + str(start1_pose))
+        self.get_logger().info('Goal 1 pose: ' + str(goal1_pose))
+        self.get_logger().info('Start 2 pose: ' + str(start2_pose))
+        self.get_logger().info('Goal 2 pose: ' + str(goal2_pose))
+
         # instantiate individual graph for each robot and get optimal policy
         self.robot1 = RobotGraph(self.resolution, request.start1_x, request.start1_y, request.goal1_x, request.goal1_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST, logger=self.get_logger())
         self.robot2 = RobotGraph(self.resolution, request.start2_x, request.start2_y, request.goal2_x, request.goal2_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST, logger=self.get_logger())
@@ -281,6 +286,9 @@ class MStarPlanner(Node):
         self.get_logger().info('Created Robot Maps')
         self.start_node_id = (self.robot1.start_id[0], self.robot1.start_id[1], self.robot2.start_id[0], self.robot2.start_id[1])
         self.goal_node_id = (self.robot1.goal_id[0], self.robot1.goal_id[1], self.robot2.goal_id[0], self.robot2.goal_id[1])
+
+        self.get_logger().info('Start ID: ' + str(start_node_id))
+        self.get_logger().info('Goal ID: ' + str(goal_node_id))
 
         # check if starts and goals are valid vertices
         if not((self.robot1.start_id in self.robot1.graph) and (self.robot2.start_id in self.robot2.graph) and (self.robot1.goal_id in self.robot1.graph) and (self.robot2.goal_id in self.robot2.graph)):
@@ -311,7 +319,7 @@ class MStarPlanner(Node):
 
 
     def is_goal(self, node_id):
-        self.get_logger().info('Found goal. ' + str(node_id) + ' = ' +  str(self.goal_node_id))
+        self.get_logger().info('Checking goal: ' + str(node_id) + ' == ' +  str(self.goal_node_id))
         return node_id == self.goal_node_id
 
 
@@ -345,11 +353,14 @@ class MStarPlanner(Node):
 
     def get_neighbor_ids(self, node_id):
 
+        self.get_logger().info('Looking up neighbors')
+
         node = self.graph[node_id]
         curr_r1_id = (node_id[0], node_id[1])
         curr_r2_id = (node_id[2], node_id[3])
 
         if len(node.collision_set) == 0:
+            self.get_logger().info('Following optimal policy')
             next_vertex_1_id = self.robot1.graph[curr_r1_id].optimal_policy
             next_vertex_2_id = self.robot2.graph[curr_r2_id].optimal_policy
 
@@ -362,6 +373,7 @@ class MStarPlanner(Node):
 
         # generate pairwise combinations of neighboring states
         else:
+            self.get_logger().info('Collisions, expanding search')
             r1_neighbors = self.robot1.graph[curr_r1_id].neighbor_ids
             r2_neighbors = self.robot2.graph[curr_r2_id].neighbor_ids
             r1_neighbors.append(curr_r1_id)
