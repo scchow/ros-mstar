@@ -398,11 +398,9 @@ class MStarPlanner(Node):
         node = self.get_node_from_id(node_id)
         if node.back_ptr is None:
             back_trace = [node_id]
-            self.get_logger().info('back trace: ' + str(back_trace))
             return back_trace
         else:
             back_trace = [node_id] + self.back_track_helper(node.back_ptr)
-            self.get_logger().info('back trace: ' + str(back_trace))
             return back_trace
 
     def back_track(self, node_id):
@@ -520,7 +518,7 @@ class MStarPlanner(Node):
                 pose_stamped.header.frame_id = self.costmap_msg.header.frame_id
                 pose_stamped.pose.position.x = waypoint[0]
                 pose_stamped.pose.position.y = waypoint[1]
-                pose_stamped.pose.position.y = 0
+                pose_stamped.pose.position.z = 0.0
 
                 yaw = math.atan2(waypoint[1] - prev_waypoint[1], waypoint[0] - prev_waypoint[0])
                 pose_stamped.pose.orientation = heading(yaw)
