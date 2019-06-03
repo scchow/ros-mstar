@@ -274,10 +274,10 @@ class MStarPlanner(Node):
         self.start2_pose = (request.start2_x, request.start2_y)
         self.goal2_pose = (request.goal2_x, request.goal2_y)
 
-        self.get_logger().info('Start 1 pose: ' + str(start1_pose))
-        self.get_logger().info('Goal 1 pose: ' + str(goal1_pose))
-        self.get_logger().info('Start 2 pose: ' + str(start2_pose))
-        self.get_logger().info('Goal 2 pose: ' + str(goal2_pose))
+        self.get_logger().info('Start 1 pose: ' + str(self.start1_pose))
+        self.get_logger().info('Goal 1 pose: ' + str(self.goal1_pose))
+        self.get_logger().info('Start 2 pose: ' + str(self.start2_pose))
+        self.get_logger().info('Goal 2 pose: ' + str(self.goal2_pose))
 
         # instantiate individual graph for each robot and get optimal policy
         self.robot1 = RobotGraph(self.resolution, request.start1_x, request.start1_y, request.goal1_x, request.goal1_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST, logger=self.get_logger())
@@ -287,8 +287,8 @@ class MStarPlanner(Node):
         self.start_node_id = (self.robot1.start_id[0], self.robot1.start_id[1], self.robot2.start_id[0], self.robot2.start_id[1])
         self.goal_node_id = (self.robot1.goal_id[0], self.robot1.goal_id[1], self.robot2.goal_id[0], self.robot2.goal_id[1])
 
-        self.get_logger().info('Start ID: ' + str(start_node_id))
-        self.get_logger().info('Goal ID: ' + str(goal_node_id))
+        self.get_logger().info('Start ID: ' + str(self.start_node_id))
+        self.get_logger().info('Goal ID: ' + str(self.goal_node_id))
 
         # check if starts and goals are valid vertices
         if not((self.robot1.start_id in self.robot1.graph) and (self.robot2.start_id in self.robot2.graph) and (self.robot1.goal_id in self.robot1.graph) and (self.robot2.goal_id in self.robot2.graph)):
