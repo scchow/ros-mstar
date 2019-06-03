@@ -57,6 +57,10 @@ class RobotGraph:
         self.start_id = self.convert_costmap_pose_to_graph_index(self.start_pose[0], self.start_pose[1])
         self.goal_id = self.convert_costmap_pose_to_graph_index(self.goal_pose[0], self.goal_pose[1])
 
+        self.logger.info('Resolution: ' + str(self.resolution))
+        self.logger.info('Width: ' + str(self.width))
+        self.logger.info('Height: ' + str(self.height))
+
         # instantiate graph vertices
         self.graph = {}
         for x in range(self.width):
