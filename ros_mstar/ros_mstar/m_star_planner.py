@@ -534,7 +534,12 @@ class MStarPlanner(Node):
 def heading(yaw):
     """A helper function to getnerate quaternions from yaws."""
     q = euler2quat(0.0, 0.0, yaw)
-    return Quaternion(q)
+    quat = Quaternion()
+    quat.x = q[0]
+    quat.y = q[1]
+    quat.z = q[2]
+    quat.w = q[3]
+    return quat
 
 
 def main(args=sys.argv[1:]):
