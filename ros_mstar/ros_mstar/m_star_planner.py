@@ -168,6 +168,8 @@ class RobotGraph:
         # run Dijkstra's backward to get shortest path (assume undirected graph) from goal to each node, and reverse backpointers
         # to get optimal policy for each vertex
 
+        self.logger.info('Running Dijkstras')
+
         unvisited_vertices = []
         unvisited_vertex_costs = []
         unvisited_vertex_ids = []
@@ -276,6 +278,7 @@ class MStarPlanner(Node):
         self.robot1 = RobotGraph(self.resolution, request.start1_x, request.start1_y, request.goal1_x, request.goal1_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST, logger=self.get_logger())
         self.robot2 = RobotGraph(self.resolution, request.start2_x, request.start2_y, request.goal2_x, request.goal2_y, self.occupancy_threshold, self.costmap_msg, self.USE_COSTMAP_VALUES, self.MAXCOST, logger=self.get_logger())
 
+        self.get_logger().info('Created Robot Maps')
         self.start_node_id = (self.robot1.start_id[0], self.robot1.start_id[1], self.robot2.start_id[0], self.robot2.start_id[1])
         self.goal_node_id = (self.robot1.goal_id[0], self.robot1.goal_id[1], self.robot2.goal_id[0], self.robot2.goal_id[1])
 
