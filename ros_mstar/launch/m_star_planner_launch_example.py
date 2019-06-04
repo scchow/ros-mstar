@@ -14,5 +14,5 @@ def generate_launch_description():
             node_executable='m_star_planner',
             node_name='m_star_planner',
             output='screen',
-            arguments=['0.5', '128', '/r1/costmap', '/get_multi_robot_plan', '0.25', 'l2', '1', 'inf']),
+            arguments=['0.5', '128', '/r1/costmap', '/low_rez_costmap', '/get_multi_robot_plan', '0.25', 'l2', '1', 'inf']),
     ])
