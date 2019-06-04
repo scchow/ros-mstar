@@ -222,7 +222,7 @@ class JointGraphNode:
 
 class MStarPlanner(Node):
 
-    def __init__(self, resolution, occupancy_threshold, costmap_topic, mstar_service, robot_radius, heuristic, USE_COSTMAP_VALUES, MAXCOST):
+    def __init__(self, resolution, occupancy_threshold, costmap_topic, costmap_out_topic, mstar_service, robot_radius, heuristic, USE_COSTMAP_VALUES, MAXCOST):
 
         super().__init__('m_star')
 
@@ -245,6 +245,8 @@ class MStarPlanner(Node):
         self.MAXCOST = MAXCOST
 
         self.costmap_msg = None
+        self.low_rez_costmap = None
+        self.occ_grid_pub = = self.create_publisher(OccupancyGrid, costmap_out_topic)
         self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback)
 
         self.publisher_ = self.create_publisher(String, 'topic')
@@ -259,8 +261,14 @@ class MStarPlanner(Node):
         self.costmap_msg = msg
         self.costmap = msg.data
         self.get_logger().info('Costmap Received!')
-        self.width = self.costmap_msg.info.width
-        self.height = self.costmap_msg.info.height
+        self.costmap_width = msg.info.width
+        self.costmap_height = msg.info.height
+        self.costmap_resolution = msg.info.resolution
+        self.costmap_origin_x = msg.info.origin.position.x
+        self.costmap_origin_y = msg.info.origin.position.y
+
+        self.create_low_rez_costmap()
+
 
     def timer_callback(self):
         msg = String()
@@ -268,6 +276,7 @@ class MStarPlanner(Node):
         self.publisher_.publish(msg)
         self.get_logger().info('Publishing: "%s"' % msg.data)
         self.i += 1
+
 
     def service_callback(self, request, response):
         while self.costmap_msg is None:
@@ -310,6 +319,108 @@ class MStarPlanner(Node):
         response.r2_path = r2_path
 
         return response
+
+
+
+    def create_low_rez_costmap(self):
+
+        width = int(round(self.costmap_width * (self.costmap_resolution/self.resolution)))
+        height = int(round(self.costmap_height * (self.costmap_resolution/self.resolution)))
+
+        if self.low_rez_costmap is None:
+            # instantiate graph vertices
+            low_rez_costmap = []
+            for y in range(self.height):
+                for x in range(self.width):
+                    if self.check_obstacles((x, y)):
+                        graph.append(255)
+                    else:
+                        costmap_value = self.get_costmap_value((x, y))
+                        graph.append(costmap_value)
+
+            self.low_rez_costmap = low_rez_costmap
+
+        occ_grid_out = OccupancyGrid()
+        occ_grid_out.header.stamp = self.get_clock().now().to_msg()
+        occ_grid_out.header.frame_id = self.costmap_msg.header.header_id
+        occ_grid_out.info.resolution = self.resolution
+        occ_grid_out.info.width = width
+        occ_grid_out.info.height = height
+        occ_grid_out.info.origin = self.costmap_msg.info.origin
+        occ_grid_out.data = self.low_rez_costmap
+
+        self.occ_grid_pub.publish(occ_grid_out)
+
+
+
+    def check_obstacles(self, vertex_id):
+        costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
+        costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
+        left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
+        top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
+
+        highest_val = 0
+        for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
+            for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
+                cell = x+self.costmap_width*y
+                try:
+                    value = self.costmap[cell]
+                except IndexError:
+                    self.logger.error('Indexed out of bounds!')
+                    self.logger.error('vertex id: {}'.format(vertex_id))
+                    self.logger.error('computed idx: {}'.format(cell))
+                    self.logger.error('height: {}'.format(self.costmap_height))
+                    self.logger.error('width: {}'.format(self.costmap_width))
+                    self.logger.error('x: {}'.format(x))
+                    self.logger.error('y: {}'.format(y))
+                    self.logger.error('costmap origin x: {}'.format(self.costmap_origin_x))
+                    self.logger.error('costmap origin y: {}'.format(self.costmap_origin_y))
+                    sys.exit()
+                if value > highest_val:
+                    highest_val = value
+
+        if highest_val >= self.occupancy_threshold:
+            return True
+            
+
+    def get_costmap_value(self, vertex_id):
+        costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
+        costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
+        left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
+        top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
+
+        highest_val = 0
+        for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
+            for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
+                cell = x+self.costmap_width*y
+                try:
+                    value = self.costmap[cell]
+                except IndexError:
+                    self.logger.error('Indexed out of bounds!')
+                    self.logger.error('vertex id: {}'.format(vertex_id))
+                    self.logger.error('computed idx: {}'.format(cell))
+                    self.logger.error('height: {}'.format(self.costmap_height))
+                    self.logger.error('width: {}'.format(self.costmap_width))
+                    self.logger.error('x: {}'.format(x))
+                    self.logger.error('y: {}'.format(y))
+                    self.logger.error('costmap origin x: {}'.format(self.costmap_origin_x))
+                    self.logger.error('costmap origin y: {}'.format(self.costmap_origin_y))
+                    sys.exit()
+                if value > highest_val:
+                    highest_val = value
+
+        return highest_val
+
+
+    def convert_graph_index_to_costmap_pose(self, x_index, y_index):
+        x = self.costmap_origin_x + (self.resolution/self.costmap_resolution)*x_index
+        y = self.costmap_origin_y + (self.resolution/self.costmap_resolution)*y_index
+        return (x, y)
+
 
 
     def get_node_from_id(self, graph_id):
@@ -553,13 +664,14 @@ def main(args=sys.argv[1:]):
     resolution = float(args[0])
     occupancy_threshold = float(args[1])
     costmap_topic = args[2]
-    mstar_service = args[3]
-    robot_radius = float(args[4])
-    heuristic = args[5]
-    USE_COSTMAP_VALUES = bool(int(args[6]))
-    MAXCOST = float(args[7])
+    costmap_out_topic = args[3]
+    mstar_service = args[4]
+    robot_radius = float(args[5])
+    heuristic = args[6]
+    USE_COSTMAP_VALUES = bool(int(args[7]))
+    MAXCOST = float(args[8])
 
-    m_star = MStarPlanner(resolution, occupancy_threshold, costmap_topic, mstar_service, robot_radius, heuristic, USE_COSTMAP_VALUES, MAXCOST)
+    m_star = MStarPlanner(resolution, occupancy_threshold, costmap_topic, costmap_out_topic, mstar_service, robot_radius, heuristic, USE_COSTMAP_VALUES, MAXCOST)
 
     rclpy.spin(m_star)
 
