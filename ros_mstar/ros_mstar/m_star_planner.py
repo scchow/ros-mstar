@@ -271,14 +271,12 @@ class MStarPlanner(Node):
 
         self.create_low_rez_costmap()
 
-
     def timer_callback(self):
         msg = String()
         msg.data = 'Hello World: %d' % self.i
         self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: "%s"' % msg.data)
+        # self.get_logger().info('Publishing: "%s"' % msg.data)
         self.i += 1
-
 
     def service_callback(self, request, response):
         while self.costmap_msg is None:
@@ -320,6 +318,7 @@ class MStarPlanner(Node):
         response.r1_path = r1_path
         response.r2_path = r2_path
 
+        self.get_logger().warn("RETURNING RESPONSE FROM SERVICE!")
         return response
 
 
@@ -328,10 +327,10 @@ class MStarPlanner(Node):
 
         width = int(round(self.costmap_width * (self.costmap_resolution/self.resolution)))
         height = int(round(self.costmap_height * (self.costmap_resolution/self.resolution)))
-        self.get_logger().info('Ratio of resolutions: {}'.format(
-            self.costmap_resolution/self.resolution))
-        self.get_logger().info('width, height: {}, {}'.format(width, height))
-        self.get_logger().info('Other costmap width, height: {}, {}'.format(width, height))
+        # self.get_logger().info('Ratio of resolutions: {}'.format(
+        #     self.costmap_resolution/self.resolution))
+        # self.get_logger().info('width, height: {}, {}'.format(width, height))
+        # self.get_logger().info('Other costmap width, height: {}, {}'.format(width, height))
 
         if self.low_rez_costmap is None:
             # instantiate graph vertices
@@ -356,8 +355,6 @@ class MStarPlanner(Node):
         occ_grid_out.data = self.low_rez_costmap
 
         self.occ_grid_pub.publish(occ_grid_out)
-
-
 
     def check_obstacles(self, vertex_id):
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)

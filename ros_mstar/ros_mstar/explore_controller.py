@@ -25,7 +25,7 @@ import rclpy
 from rclpy.node import Node
 from mstar_msgs.srv import MStarSrv
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
 
@@ -42,10 +42,10 @@ ROBOT1_SWITCH_TOPIC = "/r1/switch_found"
 ROBOT2_SWITCH_TOPIC = "/r2/switch_found"
 
 # name of the MSTAR service
-MSTAR_SERVICE_NAME = "mstar_service"
+MSTAR_SERVICE_NAME = "/get_multi_robot_plan"
 
 # Locations of the center of each room
-ROOM_CENTERS = [[0,0], [1,1], [2,2], [3,3]]
+ROOM_CENTERS = [[0,0], [-0.13, -1.43], [1.44, -1.18], [3.07, -1.19]]
 
 class ExploreController(Node):
 
@@ -66,8 +66,8 @@ class ExploreController(Node):
         self.robot2_seen_switch = None
 
         # Subscribers for robot 1 and 2 pose
-        self.robot1_pose_sub = self.create_subscription(Pose, ROBOT1_POSE_TOPIC, lambda msg: self.update_pose(1, msg))
-        self.robot2_pose_sub = self.create_subscription(Pose, ROBOT2_POSE_TOPIC, lambda msg: self.update_pose(2, msg))
+        self.robot1_pose_sub = self.create_subscription(PoseStamped, ROBOT1_POSE_TOPIC, lambda msg: self.update_pose(1, msg))
+        self.robot2_pose_sub = self.create_subscription(PoseStamped, ROBOT2_POSE_TOPIC, lambda msg: self.update_pose(2, msg))
         
         # Publishers for robot 1 and 2 path
         self.robot1_path_pub = self.create_publisher(Path, ROBOT1_PATH_TOPIC)
@@ -96,11 +96,11 @@ class ExploreController(Node):
 
         """
         if robot_id == 1:
-            self.robot1_pose = pose_msg
+            self.robot1_pose = pose_msg.pose
         elif robot_id == 2:
-            self.robot2_pose = pose_msg
+            self.robot2_pose = pose_msg.pose
         else:
-            rclpy.get_logger().warn("Explore Controller: Invalid Robot ID passed into update_pose.")
+            self.get_logger().warn("Explore Controller: Invalid Robot ID passed into update_pose.")
     
     def update_switch_status(self, robot_id, switch_msg):
         """ Updates the switch status of each robot
@@ -114,7 +114,7 @@ class ExploreController(Node):
         elif robot_id == 2:
             self.robot2_seen_switch = switch_msg.data
         else:
-            rclpy.get_logger().warn("Explore Controller: Invalid Robot ID passed into update_switch_status.")
+            self.get_logger().warn("Explore Controller: Invalid Robot ID passed into update_switch_status.")
 
     def construct_request_mstar(self, robot1_goal, robot2_goal):
         """ Constructs a request for the M-star service planner
@@ -127,9 +127,11 @@ class ExploreController(Node):
             request (MStarSrv): a request for a plan
         """
         while (self.robot1_pose is None):
-            rclpy.get_logger().warn("Waiting to get pose for robot 1")
-        while (self.robot1_pose is None):
-            rclpy.get_logger().warn("Waiting to get pose for robot 2")
+            self.get_logger().warn("Waiting to get pose for robot 1")
+            rclpy.spin_once(self)
+        while (self.robot2_pose is None):
+            self.get_logger().warn("Waiting to get pose for robot 2")
+            rclpy.spin_once(self)
 
         request = MStarSrv.Request()
         request.start1_x, request.start1_y = self.robot1_pose.position.x, self.robot1_pose.position.y
@@ -155,21 +157,31 @@ class ExploreController(Node):
         
         # wait for M-Star service to come up
         while not self.mstar_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("M-star service named {} not available, waiting again...".format(MSTAR_SERVICE_NAME))
+            self.get_logger().warn("M-star service named {} not available, waiting again...".format(MSTAR_SERVICE_NAME))
         
         # Send Request
         self.future = self.mstar_client.call_async(request)
+        rclpy.spin_until_future_complete(self, self.future)
+
+        if self.future.result() is not None:
+            response = self.future.result()
+            self.get_logger().warn("Got response from M-star")
+        else:
+            self.get_logger().warn("Service call to M-star failed: {}".format(self.future.exception()))
+ 
 
         # Wait for response
-        while rclpy.ok():
-            rclpy.spin_once(self.mstar_client)
-            if self.future.done():
-                if self.future.result() is not None:
-                    response = self.future.result()
-                else:
-                    self.get_logger().warn("Service call to M-star failed: {}".format(self.future.exception()))
-
-        # Parse response
+        #while rclpy.ok():
+        #    #rclpy.spin_once(self)
+        #    if self.future.done():
+        #        if self.future.result() is not None:
+        #            response = self.future.result()
+        #            self.get_logger().warn("Got response from M-star")
+        #        else:
+        #            self.get_logger().warn("Service call to M-star failed: {}".format(self.future.exception()))
+        #    else:
+        #        self.get_logger().warn("Waiting for response from M-star...")
+        ## Parse response
         robot1_path = response.r1_path
         robot2_path = response.r2_path
 
@@ -183,7 +195,8 @@ class ExploreController(Node):
         """
         self.robot1_path_pub.publish(robot1_path)
         self.robot2_path_pub.publish(robot2_path)
-        self.get_logger().info("Sent paths to each robot:\n Robot 1:{}\n Robot 2:{}".format(robot1_path, robot2_path))
+        self.get_logger().warn("Sent paths to each robot!")
+        # self.get_logger().warn("Sent paths to each robot!\n Robot 1:{}\n Robot 2:{}".format(robot1_path, robot2_path))
         return
 
     def wait_for_switch(self):
@@ -191,7 +204,7 @@ class ExploreController(Node):
         
         while (self.robot1_seen_switch is None) or (self.robot2_seen_switch is None):
             time.sleep(1)
-            self.get_logger().info("Waiting for both switches to be pressed: Status {}, {}".format(not self.robot1_seen_switch is None, not self.robot2_seen_switch is None))
+            self.get_logger().warn("Waiting for both switches to be pressed: Status {}, {}".format(not self.robot1_seen_switch is None, not self.robot2_seen_switch is None))
         
         return
     
@@ -231,7 +244,7 @@ class ExploreController(Node):
                 self.get_logger().warn("Failed to allocate rooms for robots\n\tExplored Rooms: {}")
                 raise ValueError("Ran out of rooms to explore")
             
-            self.get_logger().info("Sending Robot 1 to Room {}, Sending Robot 2 to Room {}".format(self.robot1_room, self.robot2_room))
+            self.get_logger().warn("Sending Robot 1 to Room {}, Sending Robot 2 to Room {}".format(self.robot1_room, self.robot2_room))
 
             # Create request to plan
             robot1_goal = self.room_centers[self.robot1_room]
@@ -240,6 +253,13 @@ class ExploreController(Node):
 
             # send the request to MStar and receive plans
             robot1_path, robot2_path = self.send_request_mstar(request)
+            self.get_logger().error("Robot 1 Path:\n")
+            for msg in robot1_path.poses:
+                self.get_logger().error("Pose: {}, {}\n".format(msg.pose.position.x, msg.pose.position.y))
+
+            self.get_logger().error("Robot 2 Path:\n")
+            for msg in robot2_path.poses:
+                self.get_logger().error("Pose: {}, {}\n".format(msg.pose.position.x, msg.pose.position.y))
 
             # send plans to each robot
             self.publish_paths(robot1_path, robot2_path)
@@ -253,11 +273,13 @@ class ExploreController(Node):
             # Check if done
             self.done = self.robot1_done and self.robot2_done
 
+            #self.done = True # TODO: REMOVE THIS WHEN DONE
+
             if not self.done:
-                self.get_logger().info("Exploration in Progress:\n\tRobot 1 in Room {}, Tag Status {}\n\tRobot2 in Room {}, Tag Status {}\n\n"\
+                self.get_logger().warn("Exploration in Progress:\n\tRobot 1 in Room {}, Tag Status {}\n\tRobot2 in Room {}, Tag Status {}\n\n"\
                     .format(self.robot1_room, self.robot1_done, self.robot2_room, self.robot2_done))
 
-        self.get_logger().info("Exploration complete!\n\tRobot 1 in Room {}\n\tRobot2 in Room {}".format(self.robot1_room, self.robot2_room))
+        self.get_logger().warn("Exploration complete!\n\tRobot 1 in Room {}\n\tRobot2 in Room {}".format(self.robot1_room, self.robot2_room))
 
 def main(args=None):
     """ Runs an Explorer node """
@@ -265,6 +287,7 @@ def main(args=None):
     rclpy.init(args=args)
     
     explorer = ExploreController()
+    
     explorer.run()
     
     rclpy.spin(explorer)

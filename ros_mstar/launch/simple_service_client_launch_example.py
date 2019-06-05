@@ -22,7 +22,7 @@ def launch(launch_descriptor, argv):
     package = 'ros_mstar'
     ld.add_process(
         cmd=[get_executable_path(package_name=package, executable_name='simple_service_client.py'), 
-        'mstar_service', '0.0', '0.0', '3.0', '3.0', '2.0', '0.0', '0.0', '3.0'],
+        'mstar_service', '0', '0', '-0.13', '-1.43', '1.44', '-1.18', '3.07', '-1.19'],
         name='simple_service_client',
         exit_handler=restart_exit_handler,
     )
