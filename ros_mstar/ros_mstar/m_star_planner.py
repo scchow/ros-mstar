@@ -246,7 +246,7 @@ class MStarPlanner(Node):
 
         self.costmap_msg = None
         self.low_rez_costmap = None
-        self.occ_grid_pub = = self.create_publisher(OccupancyGrid, costmap_out_topic)
+        self.occ_grid_pub = self.create_publisher(OccupancyGrid, costmap_out_topic)
         self.costmap_sub = self.create_subscription(OccupancyGrid, costmap_topic, self.costmap_callback)
 
         self.publisher_ = self.create_publisher(String, 'topic')
@@ -326,23 +326,27 @@ class MStarPlanner(Node):
 
         width = int(round(self.costmap_width * (self.costmap_resolution/self.resolution)))
         height = int(round(self.costmap_height * (self.costmap_resolution/self.resolution)))
+        self.get_logger().info('Ratio of resolutions: {}'.format(
+            self.costmap_resolution/self.resolution))
+        self.get_logger().info('width, height: {}, {}'.format(width, height))
+        self.get_logger().info('Other costmap width, height: {}, {}'.format(width, height))
 
         if self.low_rez_costmap is None:
             # instantiate graph vertices
             low_rez_costmap = []
-            for y in range(self.height):
-                for x in range(self.width):
+            for y in range(height):
+                for x in range(width):
                     if self.check_obstacles((x, y)):
-                        graph.append(255)
+                        low_rez_costmap.append(255)
                     else:
                         costmap_value = self.get_costmap_value((x, y))
-                        graph.append(costmap_value)
+                        low_rez_costmap.append(costmap_value)
 
             self.low_rez_costmap = low_rez_costmap
 
         occ_grid_out = OccupancyGrid()
         occ_grid_out.header.stamp = self.get_clock().now().to_msg()
-        occ_grid_out.header.frame_id = self.costmap_msg.header.header_id
+        occ_grid_out.header.frame_id = self.costmap_msg.header.frame_id
         occ_grid_out.info.resolution = self.resolution
         occ_grid_out.info.width = width
         occ_grid_out.info.height = height
