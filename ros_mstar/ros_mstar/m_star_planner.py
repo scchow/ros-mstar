@@ -666,10 +666,10 @@ def heading(yaw):
     """A helper function to getnerate quaternions from yaws."""
     q = euler2quat(0.0, 0.0, yaw)
     quat = Quaternion()
-    quat.x = q[0]
-    quat.y = q[1]
-    quat.z = q[2]
-    quat.w = q[3]
+    quat.w = q[0]
+    quat.x = q[1]
+    quat.y = q[2]
+    quat.z = q[3]
     return quat
 
 
