@@ -648,7 +648,10 @@ class MStarPlanner(Node):
                 pose_stamped.pose.position.y = waypoint[1]
                 pose_stamped.pose.position.z = 0.0
 
-                yaw = math.atan2(waypoint[1] - prev_waypoint[1], waypoint[0] - prev_waypoint[0])
+                if (prev_waypoint[0] == waypoint[0]) and (prev_waypoint[1] == waypoint[1]):
+                    yaw = 0.0
+                else:
+                    yaw = math.atan2(waypoint[1] - prev_waypoint[1], waypoint[0] - prev_waypoint[0])
                 pose_stamped.pose.orientation = heading(yaw)
                 poses.append(pose_stamped)
                 prev_waypoint = waypoint
