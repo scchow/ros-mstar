@@ -350,8 +350,8 @@ class MStarPlanner(Node):
         occ_grid_out.header.stamp = self.get_clock().now().to_msg()
         occ_grid_out.header.frame_id = self.costmap_msg.header.frame_id
         occ_grid_out.info.resolution = self.resolution
-        occ_grid_out.info.width = width
-        occ_grid_out.info.height = height
+        occ_grid_out.info.width = width/self.resolution
+        occ_grid_out.info.height = height/self.resolution
         occ_grid_out.info.origin = self.costmap_msg.info.origin
         occ_grid_out.data = self.low_rez_costmap
 
