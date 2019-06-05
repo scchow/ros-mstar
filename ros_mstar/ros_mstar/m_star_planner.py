@@ -110,6 +110,8 @@ class RobotGraph:
                 cell = x+int(round(self.costmap_width*self.costmap_resolution))*y
                 try:
                     value = self.costmap[cell]
+                    if value > highest_val:
+                        highest_val = value
                 except IndexError:
                     self.logger.error('Indexed out of bounds!')
                     self.logger.error('vertex id: {}'.format(vertex_id))
@@ -121,8 +123,6 @@ class RobotGraph:
                     self.logger.error('costmap origin x: {}'.format(self.costmap_origin_x))
                     self.logger.error('costmap origin y: {}'.format(self.costmap_origin_y))
                     sys.exit()
-                if value > highest_val:
-                    highest_val = value
 
         if highest_val >= self.occupancy_threshold:
             return True
@@ -373,6 +373,8 @@ class MStarPlanner(Node):
                 cell = x+int(round(self.costmap_width*self.costmap_resolution))*y
                 try:
                     value = self.costmap[cell]
+                    if value > highest_val:
+                        highest_val = value
                 except IndexError:
                     self.logger.error('Indexed out of bounds!')
                     self.logger.error('vertex id: {}'.format(vertex_id))
@@ -384,8 +386,6 @@ class MStarPlanner(Node):
                     self.logger.error('costmap origin x: {}'.format(self.costmap_origin_x))
                     self.logger.error('costmap origin y: {}'.format(self.costmap_origin_y))
                     sys.exit()
-                if value > highest_val:
-                    highest_val = value
 
         if highest_val >= self.occupancy_threshold:
             return True
