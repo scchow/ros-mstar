@@ -126,6 +126,8 @@ class RobotGraph:
 
         if highest_val >= self.occupancy_threshold:
             return True
+        else:
+            return False
             
 
     def get_costmap_value(self, vertex_id):
@@ -387,6 +389,8 @@ class MStarPlanner(Node):
 
         if highest_val >= self.occupancy_threshold:
             return True
+        else:
+            return False
             
 
     def get_costmap_value(self, vertex_id):
