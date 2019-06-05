@@ -52,8 +52,8 @@ class RobotGraph:
         self.costmap_height = costmap_msg.info.height
         self.costmap_origin_x = costmap_msg.info.origin.position.x
         self.costmap_origin_y = costmap_msg.info.origin.position.y
-        self.width = int(round((self.costmap_width/self.costmap_resolution) * (self.costmap_resolution/self.resolution)))
-        self.height = int(round((self.costmap_height/self.costmap_resolution) * (self.costmap_resolution/self.resolution)))
+        self.width = int(round(self.costmap_width * (self.costmap_resolution/self.resolution)))
+        self.height = int(round(self.costmap_height * (self.costmap_resolution/self.resolution)))
         self.start_id = self.convert_costmap_pose_to_graph_index(self.start_pose[0], self.start_pose[1])
         self.goal_id = self.convert_costmap_pose_to_graph_index(self.goal_pose[0], self.goal_pose[1])
 
@@ -100,14 +100,14 @@ class RobotGraph:
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
         left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
-        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), int(round(self.costmap_width/self.costmap_resolution))-1)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
         top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
-        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), int(round(self.costmap_height/self.costmap_resolution))-1)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x+int(round(self.costmap_width/self.costmap_resolution))*y
+                cell = x+self.costmap_width*y
                 try:
                     value = self.costmap[cell]
                     if value > highest_val:
@@ -134,14 +134,14 @@ class RobotGraph:
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
         left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
-        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), int(round(self.costmap_width/self.costmap_resolution))-1)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
         top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
-        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), int(round(self.costmap_height/self.costmap_resolution))-1)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x+int(round(self.costmap_width/self.costmap_resolution))*y
+                cell = x+self.costmap_width*y
                 try:
                     value = self.costmap[cell]
                 except IndexError:
@@ -326,8 +326,8 @@ class MStarPlanner(Node):
 
     def create_low_rez_costmap(self):
 
-        width = int(round((self.costmap_width/self.costmap_resolution) * (self.costmap_resolution/self.resolution)))
-        height = int(round((self.costmap_height/self.costmap_resolution) * (self.costmap_resolution/self.resolution)))
+        width = int(round(self.costmap_width * (self.costmap_resolution/self.resolution)))
+        height = int(round(self.costmap_height * (self.costmap_resolution/self.resolution)))
         self.get_logger().info('Ratio of resolutions: {}'.format(
             self.costmap_resolution/self.resolution))
         self.get_logger().info('width, height: {}, {}'.format(width, height))
@@ -350,8 +350,8 @@ class MStarPlanner(Node):
         occ_grid_out.header.stamp = self.get_clock().now().to_msg()
         occ_grid_out.header.frame_id = self.costmap_msg.header.frame_id
         occ_grid_out.info.resolution = self.resolution
-        occ_grid_out.info.width = width*self.resolution
-        occ_grid_out.info.height = height*self.resolution
+        occ_grid_out.info.width = width
+        occ_grid_out.info.height = height
         occ_grid_out.info.origin = self.costmap_msg.info.origin
         occ_grid_out.data = self.low_rez_costmap
 
@@ -363,28 +363,28 @@ class MStarPlanner(Node):
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
         left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
-        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), int(round(self.costmap_width/self.costmap_resolution))-1)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
         top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
-        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), int(round(self.costmap_height/self.costmap_resolution))-1)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x+int(round(self.costmap_width/self.costmap_resolution))*y
+                cell = x+self.costmap_width*y
                 try:
                     value = self.costmap[cell]
                     if value > highest_val:
                         highest_val = value
                 except IndexError:
-                    self.logger.error('Indexed out of bounds!')
-                    self.logger.error('vertex id: {}'.format(vertex_id))
-                    self.logger.error('computed idx: {}'.format(cell))
-                    self.logger.error('height: {}'.format(self.costmap_height))
-                    self.logger.error('width: {}'.format(self.costmap_width))
-                    self.logger.error('x: {}'.format(x))
-                    self.logger.error('y: {}'.format(y))
-                    self.logger.error('costmap origin x: {}'.format(self.costmap_origin_x))
-                    self.logger.error('costmap origin y: {}'.format(self.costmap_origin_y))
+                    self.get_logger().error('Indexed out of bounds!')
+                    self.get_logger().error('vertex id: {}'.format(vertex_id))
+                    self.get_logger().error('computed idx: {}'.format(cell))
+                    self.get_logger().error('height: {}'.format(self.costmap_height))
+                    self.get_logger().error('width: {}'.format(self.costmap_width))
+                    self.get_logger().error('x: {}'.format(x))
+                    self.get_logger().error('y: {}'.format(y))
+                    self.get_logger().error('costmap origin x: {}'.format(self.costmap_origin_x))
+                    self.get_logger().error('costmap origin y: {}'.format(self.costmap_origin_y))
                     sys.exit()
 
         if highest_val >= self.occupancy_threshold:
@@ -397,26 +397,26 @@ class MStarPlanner(Node):
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
         left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
-        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), int(round(self.costmap_width/self.costmap_resolution))-1)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
         top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
-        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), int(round(self.costmap_height/self.costmap_resolution))-1)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x+int(round(self.costmap_width/self.costmap_resolution))*y
+                cell = x+self.costmap_width*y
                 try:
                     value = self.costmap[cell]
                 except IndexError:
-                    self.logger.error('Indexed out of bounds!')
-                    self.logger.error('vertex id: {}'.format(vertex_id))
-                    self.logger.error('computed idx: {}'.format(cell))
-                    self.logger.error('height: {}'.format(self.costmap_height))
-                    self.logger.error('width: {}'.format(self.costmap_width))
-                    self.logger.error('x: {}'.format(x))
-                    self.logger.error('y: {}'.format(y))
-                    self.logger.error('costmap origin x: {}'.format(self.costmap_origin_x))
-                    self.logger.error('costmap origin y: {}'.format(self.costmap_origin_y))
+                    self.get_logger().error('Indexed out of bounds!')
+                    self.get_logger().error('vertex id: {}'.format(vertex_id))
+                    self.get_logger().error('computed idx: {}'.format(cell))
+                    self.get_logger().error('height: {}'.format(self.costmap_height))
+                    self.get_logger().error('width: {}'.format(self.costmap_width))
+                    self.get_logger().error('x: {}'.format(x))
+                    self.get_logger().error('y: {}'.format(y))
+                    self.get_logger().error('costmap origin x: {}'.format(self.costmap_origin_x))
+                    self.get_logger().error('costmap origin y: {}'.format(self.costmap_origin_y))
                     sys.exit()
                 if value > highest_val:
                     highest_val = value
