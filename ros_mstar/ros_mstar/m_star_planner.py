@@ -100,14 +100,14 @@ class RobotGraph:
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
         left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
-        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), int(round(self.costmap_width*self.costmap_resolution))-1)
         top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
-        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), int(round(self.costmap_height*self.costmap_resolution))-1)
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x+self.costmap_width*y
+                cell = x+int(round(self.costmap_width*self.costmap_resolution))*y
                 try:
                     value = self.costmap[cell]
                 except IndexError:
@@ -132,14 +132,14 @@ class RobotGraph:
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
         left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
-        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), int(round(self.costmap_width*self.costmap_resolution))-1)
         top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
-        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), int(round(self.costmap_height*self.costmap_resolution))-1)
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x+self.costmap_width*y
+                cell = x+int(round(self.costmap_width*self.costmap_resolution))*y
                 try:
                     value = self.costmap[cell]
                 except IndexError:
@@ -361,14 +361,14 @@ class MStarPlanner(Node):
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
         left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
-        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), int(round(self.costmap_width*self.costmap_resolution))-1)
         top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
-        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), int(round(self.costmap_height*self.costmap_resolution))-1)
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x+self.costmap_width*y
+                cell = x+int(round(self.costmap_width*self.costmap_resolution))*y
                 try:
                     value = self.costmap[cell]
                 except IndexError:
@@ -393,14 +393,14 @@ class MStarPlanner(Node):
         costmap_pose = self.convert_graph_index_to_costmap_pose(*vertex_id)
         costmap_index = (int(round((costmap_pose[0] - self.costmap_origin_x)/self.costmap_resolution)), int(round((costmap_pose[1] - self.costmap_origin_y)/self.costmap_resolution)))
         left_boundary_costmap_x_index = max(int(round(((costmap_pose[0] - self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), 0)
-        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), self.costmap_width-1)
+        right_boundary_costmap_x_index = min(int(round(((costmap_pose[0] + self.resolution/2.0) - self.costmap_origin_x)/self.costmap_resolution)), int(round(self.costmap_width*self.costmap_resolution))-1)
         top_boundary_costmap_y_index = max(int(round(((costmap_pose[1] - self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), 0)
-        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), self.costmap_height-1)
+        bottom_boundary_costmap_y_index = min(int(round(((costmap_pose[1] + self.resolution/2.0) - self.costmap_origin_y)/self.costmap_resolution)), int(round(self.costmap_height*self.costmap_resolution))-1)
 
         highest_val = 0
         for x in range(left_boundary_costmap_x_index, right_boundary_costmap_x_index+1):
             for y in range(top_boundary_costmap_y_index, bottom_boundary_costmap_y_index+1):
-                cell = x+self.costmap_width*y
+                cell = x+int(round(self.costmap_width*self.costmap_resolution))*y
                 try:
                     value = self.costmap[cell]
                 except IndexError:
