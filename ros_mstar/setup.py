@@ -35,6 +35,8 @@ setup(
             ' ros_mstar.m_star_planner:main',
             'explorer ='
             ' ros_mstar.explore_controller:main',
+            'sink ='
+            ' ros_mstar.topic_sink:main',
         ],
     },
 )
